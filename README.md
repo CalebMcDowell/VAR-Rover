@@ -1,5 +1,5 @@
 # VAR-Rover
-This repository is for a senior design project at Penn State Behrend. The goal of the project is to create rover for the Virtual/Augmented Realty Lab on campus.
+This repository is for a senior design project at Penn State Behrend. The goal of the project is to create a rover for the Virtual/Augmented Realty Lab on campus.
 
 The rover's tasks are to:
 - Carry/transport the camera equipment, which consist of an Insta360 Pro2 camera and a FARO Focus Laser Scanner
