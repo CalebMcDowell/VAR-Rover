@@ -1,5 +1,6 @@
 /*
-
+VAR Rover Senior Design Project
+Code to level an IMU on top of the tripod
 */
 //////Includes//////
 #include <Adafruit_Sensor.h>

@@ -1,5 +1,6 @@
 /*
-
+VAR Rover Senior Design Project
+Initial test of control surfaces for automatic leveling tripod
 */
 //////Linear Actuators//////
     //Back Left
