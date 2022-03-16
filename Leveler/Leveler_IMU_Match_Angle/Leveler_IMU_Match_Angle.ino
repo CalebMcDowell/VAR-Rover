@@ -17,8 +17,8 @@ Code to level an IMU on top of the tripod
     const int F2 = 3;
     //Back
     // const int enBL = 10;
-    const int B1 = 4;
-    const int B2 = 5;
+    const int Back1 = 4;
+    const int Back2 = 5;
     //Left
     // const int enBR = 9;
     const int L1 = 6;
@@ -33,6 +33,8 @@ Code to level an IMU on top of the tripod
     
 //////Function Declarations//////
 void move4Lvl(char ='S', unsigned char =0, int =0);
+void Pitch(unsigned char =0, int =0);
+void Roll(unsigned char =0, int =0);
 float getIMUPitch();
 float getIMURoll();
 
@@ -41,8 +43,8 @@ void setup() {
     //Linear Actuators
     pinMode(F1, OUTPUT);
     pinMode(F2, OUTPUT);
-    pinMode(B1, OUTPUT);
-    pinMode(B2, OUTPUT);
+    pinMode(Back1, OUTPUT);
+    pinMode(Back2, OUTPUT);
     pinMode(L1, OUTPUT);
     pinMode(L2, OUTPUT);
     pinMode(R1, OUTPUT);
@@ -56,7 +58,8 @@ void setup() {
 }
 
 void loop() {
-    unsigned char speed = 0;
+    unsigned char speed = 1;
+    unsigned char angleRange = 1;
     float pitch, roll;
     
     move4Lvl('S');
@@ -64,19 +67,19 @@ void loop() {
       pitch = getIMUPitch();
       roll = getIMURoll();
       Serial.print(pitch);
-      Serial.print(", ");
+      Serial.print("\t");
       Serial.println(roll);
-      if(pitch>5 || pitch<-5){
-        move4Lvl('P', speed, pitch);
+      if(pitch>angleRange || pitch<-angleRange){
+        Pitch(speed, pitch);
       }
       else{
-        move4Lvl('S');
+        Pitch(0);
       }
-      if(roll>5 || roll<-5){
-        move4Lvl('R', speed, roll);
+      if(roll>angleRange || roll<-angleRange){
+        Roll(speed, roll);
       }
       else
-        move4Lvl('S');
+        Roll(0);
     }
     
 }
@@ -95,20 +98,20 @@ void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
       case 'R': //Roll
         digitalWrite(L1,d);
         digitalWrite(L2,!d);
-        digitalWrite(R1,!d);
-        digitalWrite(R2,d);
+        digitalWrite(R1,d);
+        digitalWrite(R2,!d);
         break;
       case 'P': //Pitch
         digitalWrite(F1,!d);
         digitalWrite(F2,d);
-        digitalWrite(B1,d);
-        digitalWrite(B2,!d);
+        digitalWrite(Back1,!d);
+        digitalWrite(Back2,d);
         break;
       case 'H': //Height adjust
         digitalWrite(F1,d);
         digitalWrite(F2,!d);
-        digitalWrite(B1,d);
-        digitalWrite(B2,!d);
+        digitalWrite(Back1,d);
+        digitalWrite(Back2,!d);
         digitalWrite(L1,d);
         digitalWrite(L2,!d);
         digitalWrite(R1,d);
@@ -119,8 +122,8 @@ void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
         pace = 0;
         digitalWrite(F1,0);
         digitalWrite(F2,0);
-        digitalWrite(B1,0);
-        digitalWrite(B2,0);
+        digitalWrite(Back1,0);
+        digitalWrite(Back2,0);
         digitalWrite(L1,0);
         digitalWrite(L2,0);
         digitalWrite(R1,0);
@@ -132,6 +135,53 @@ void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
     // analogWrite(enA,pace);
     // analogWrite(enB,pace);
 }
+
+void Pitch(unsigned char pace=0, int angle=0){
+    //stop actuators if no pace
+    if(pace==0){
+      digitalWrite(F1,0);
+      digitalWrite(F2,0);
+      digitalWrite(Back1,0);
+      digitalWrite(Back2,0);
+      return;
+    }
+    
+    //Set direction of movement
+    bool d = 1;  //positive direction
+    if(angle<0) d = 0;  //negative direction
+    digitalWrite(F1,!d);
+    digitalWrite(F2,d);
+    digitalWrite(Back1,!d);
+    digitalWrite(Back2,d);
+    
+    // //Set speed of motors
+    // analogWrite(enA,pace);
+    // analogWrite(enB,pace);
+}
+
+void Roll(unsigned char pace=0, int angle=0){
+    //stop actuators if no pace
+    if(pace==0){
+      digitalWrite(L1,0);
+      digitalWrite(L2,0);
+      digitalWrite(R1,0);
+      digitalWrite(R2,0);
+      return;
+    }
+
+    //Set direction of movement
+    bool d = 1;  //positive direction
+    if(angle<0) d = 0;  //negative direction
+    digitalWrite(L1,d);
+    digitalWrite(L2,!d);
+    digitalWrite(R1,d);
+    digitalWrite(R2,!d);
+    
+    // //Set speed of motors
+    // analogWrite(enA,pace);
+    // analogWrite(enB,pace);
+}
+
 
 float getIMUPitch(){
 //    sensors_event_t event; 
