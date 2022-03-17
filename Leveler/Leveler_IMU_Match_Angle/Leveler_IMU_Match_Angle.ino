@@ -13,20 +13,20 @@ Code to level an IMU on top of the tripod
 //////Linear Actuators//////
     //Front
     // const int enF = 1;
-    const int F1 = 2;
-    const int F2 = 3;
+    const int F1 = 3;
+    const int F2 = 4;
     //Back
     // const int enBL = 10;
-    const int Back1 = 4;
-    const int Back2 = 5;
+    const int Back1 = 5;
+    const int Back2 = 6;
     //Left
     // const int enBR = 9;
-    const int L1 = 6;
-    const int L2 = 7;
+    const int L1 = 7;
+    const int L2 = 8;
     //Right
     // const int enBR = 9;
-    const int R1 = 8;
-    const int R2 = 9;
+    const int R1 = 9;
+    const int R2 = 10;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topImu = Adafruit_BNO055(55, 0x28);
