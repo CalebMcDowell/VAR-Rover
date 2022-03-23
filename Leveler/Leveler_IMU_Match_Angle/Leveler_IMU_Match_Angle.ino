@@ -202,3 +202,53 @@ void getIMUAngles(float &newPitch, float &newRoll){
     newPitch=newPitch/(3.14159265)*180;
     //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
+
+//Caleb, check my work here, but I emulated the variables and mathematics from the video
+void PIDloop (){
+   int tOLD;
+   int tNEW;
+   int dt;
+   
+   float kp;
+   float ki;
+   float kd;
+   
+   float rollTARGET;
+   float rollACTUAL;
+   float rollERROR;
+   float rollERRORold;
+   float rolldERROR;
+   float rolldERRORdt;
+   float rollERRORarea;
+// float rollVal;
+
+   float pitchTARGET;
+   float pitchActual;
+   float pitchERROR;
+   float pitchERRORold;
+   float pitchdERROR;
+   float pitchdERRORdt;
+   float rollERRORarea;
+// float pitchVal;
+
+    milliOLD = milliNEW;
+    milliNEW = millis();
+
+    dt = milliNEW - milliOLD;
+
+    rollERRORold = rollERROR;
+    rollERROR = rollTARGET - rollACTUAL;
+    rolldERROR = rollERROR - rollERRORold;
+    rolldERRORdt = rolldERROR/dt;
+    rollERRORarea = rollERRORarea+rollERROR*dt;
+
+    pitchERRORold = pitchERROR;
+    pitchERROR = pitchTARGET - pitchACTUAL;
+    pitchdERROR = pitchERROR - pitchERRORold;
+    pitchdERRORdt = pitchdERROR/dt;
+    pitchERRORarea = pitchERRORarea+pitchERROR*dt;
+
+    //rollVal = rollServoVal + kp*rollERROR + kd*rolldERRORdt + ki*rollERRORarea;
+    //pitchVal = pitchServoVal + kp*pitchERROR + kd*pitchdERRORdt + ki*pitchERRORarea;
+    
+}
