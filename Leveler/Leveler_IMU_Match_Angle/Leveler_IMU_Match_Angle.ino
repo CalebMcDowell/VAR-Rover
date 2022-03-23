@@ -16,15 +16,15 @@ Code to level an IMU on top of the tripod
     const int F1 = 2;
     const int F2 = 3;
     //Back
-    // const int enBL = 10;
+    // const int enB = 10;
     const int Back1 = 4;
     const int Back2 = 5;
     //Left
-    // const int enBR = 9;
+    // const int enL = 9;
     const int L1 = 6;
     const int L2 = 7;
     //Right
-    // const int enBR = 9;
+    // const int enR = 9;
     const int R1 = 8;
     const int R2 = 9;
     
@@ -35,8 +35,7 @@ Code to level an IMU on top of the tripod
 void move4Lvl(char ='S', unsigned char =0, int =0);
 void Pitch(unsigned char =0, int =0);
 void Roll(unsigned char =0, int =0);
-float getIMUPitch();
-float getIMURoll();
+void getIMUAngles(float &, float &);
 
 
 void setup() {
@@ -59,27 +58,32 @@ void setup() {
 
 void loop() {
     unsigned char speed = 1;
-    unsigned char angleRange = 1;
+    unsigned char angleRange = 2;
     float pitch, roll;
     
     move4Lvl('S');
     while(1){
-      pitch = getIMUPitch();
-      roll = getIMURoll();
+      getIMUAngles(pitch, roll);
       Serial.print(pitch);
       Serial.print("\t");
       Serial.println(roll);
+
       if(pitch>angleRange || pitch<-angleRange){
         Pitch(speed, pitch);
-      }
-      else{
-        Pitch(0);
-      }
-      if(roll>angleRange || roll<-angleRange){
-        Roll(speed, roll);
+//        delay(250);
+//        Pitch(0);
+//        delay(1000);
       }
       else
-        Roll(0);
+        Pitch(0);
+//      if(roll>angleRange || roll<-angleRange){
+//        Roll(speed, roll);
+//        delay(250);
+//        Roll(0);
+//        delay(1000);
+//      }
+//      else
+//        Roll(0);
     }
     
 }
@@ -182,25 +186,19 @@ void Roll(unsigned char pace=0, int angle=0){
     // analogWrite(enB,pace);
 }
 
+void getIMUAngles(float &newPitch, float &newRoll){
+//    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
+//    imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
+//    
+//    newPitch = euler.y();   //Pitch
+//    newRoll = euler.z();    //Roll
 
-float getIMUPitch(){
-//    sensors_event_t event; 
-//    bno.getEvent(&event);
-//    return event.orientation.x;
-
-    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
-    imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
-    //Return yaw angle
-    return euler.y();
-}
-
-float getIMURoll(){
-//    sensors_event_t event; 
-//    bno.getEvent(&event);
-//    return event.orientation.x;
-
-    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
-    imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
-    //Return yaw angle
-    return euler.z();
+    //Get quaternions and convert to roll and pitch
+    imu::Quaternion quat = topImu.getQuat();
+    newRoll=atan2(2*(quat.w()*quat.x()+quat.y()*quat.z()),1-2*(quat.w()*quat.x()+quat.y()*quat.z()));
+    newPitch=asin(2*(quat.w()*quat.y()-quat.z()*quat.x()));
+    //Convert to degrees
+    newRoll=newRoll/(3.14159265)*180;
+    newPitch=newPitch/(3.14159265)*180;
+    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
