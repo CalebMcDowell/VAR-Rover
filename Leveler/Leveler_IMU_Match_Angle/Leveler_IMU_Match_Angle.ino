@@ -187,20 +187,20 @@ void Roll(unsigned char pace=0, int angle=0){
 }
 
 void getIMUAngles(float &newPitch, float &newRoll){
-//    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
-//    imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
-//    
-//    newPitch = euler.y();   //Pitch
-//    newRoll = euler.z();    //Roll
+    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
+    imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
+    
+    newPitch = euler.y();   //Pitch
+    newRoll = euler.z();    //Roll
 
-    //Get quaternions and convert to roll and pitch
-    imu::Quaternion quat = topImu.getQuat();
-    newRoll=atan2(2*(quat.w()*quat.x()+quat.y()*quat.z()),1-2*(quat.w()*quat.x()+quat.y()*quat.z()));
-    newPitch=asin(2*(quat.w()*quat.y()-quat.z()*quat.x()));
-    //Convert to degrees
-    newRoll=newRoll/(3.14159265)*180;
-    newPitch=newPitch/(3.14159265)*180;
-    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
+//    //Get quaternions and convert to roll and pitch
+//    imu::Quaternion quat = topImu.getQuat();
+//    newRoll=atan2(2*(quat.w()*quat.x()+quat.y()*quat.z()),1-2*(quat.w()*quat.x()+quat.y()*quat.z()));
+//    newPitch=asin(2*(quat.w()*quat.y()-quat.z()*quat.x()));
+//    //Convert to degrees
+//    newRoll=newRoll/(3.14159265)*180;
+//    newPitch=newPitch/(3.14159265)*180;
+//    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
 
 //Caleb, check my work here, but I emulated the variables and mathematics from the video
