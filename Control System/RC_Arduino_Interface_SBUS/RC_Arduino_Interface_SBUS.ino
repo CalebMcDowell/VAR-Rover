@@ -3,24 +3,47 @@ VAR Rover Senior Design Project
 FrSky Receiver/Arduino UNO Interface
 */
 
+#include "sbus.h"
+
+bfs::SbusRx RX(&Serial);  //Object for receiving
+bfs::SbusTx TX(&Serial);  //Object for transmitting
+std::array<int16_t, bfs::SbusRx::NUM_CH()> RXData; //Array for storing received data
+
+
 volatile unsigned long pulse;
 volatile long sTime;
 volatile long cTime;
-volatile int ch;
-unsigned long channel;
 
 void setup() {
-    delay(250);           //sanity delay
+    //Start serial
+    Serial.begin(115200);
+    while(!Serial);
+
+    //Begin SBUS communication
+    RX.begin();
+    TX.begin();
+
+    //LED_BUILTIN
+    pinMode(13, OUTPUT);
     
-    pinMode(2,INPUT_PULLUP);
-    pinMode(13, OUTPUT);  //LED_BUILTIN
-    
-    attachInterrupt(digitalPinToInterrupt(2), pulseTimeCh11, CHANGE);
-    
-    Serial.begin(9600);
 }
 
 void loop() {
+    if(RX.read(){
+        RXData = RX.ch();
+        //Display received data
+        for(int8_t i=0; i<bfs::SbusRx::NUM_CH(); i++){
+            Serial.print(RXData[i]);
+            Serial.print("\t");
+        }
+        //Display lost frames and failsafe info
+        Serial.print(RX.lost_frame());
+        Serial.print("\t");
+        Serial.println(RX.failsafe());
+    }
+
+
+  
     if(pulse<2500){
         channel = pulse;
         Serial.println(channel);
@@ -33,12 +56,4 @@ void loop() {
         digitalWrite(13, LOW);
     
     delay(500);
-}
-
-void pulseTimeCh11(){
-    cTime = micros();
-    if(cTime > sTime){
-      pulse = cTime - sTime;
-      sTime = cTime;
-    }
 }
