@@ -249,7 +249,7 @@ void PIDloop (){
     pitchdERRORdt = pitchdERROR/dt;
     pitchERRORarea = pitchERRORarea+pitchERROR*dt;
 
-    //rollVal = rollServoVal + kp*rollERROR + kd*rolldERRORdt + ki*rollERRORarea;
-    //pitchVal = pitchServoVal + kp*pitchERROR + kd*pitchdERRORdt + ki*pitchERRORarea;
+    //rollVal = rollVal + kp*rollERROR + ki*rollERRORarea + kd*rolldERRORdt;
+    //pitchVal = pitchVal + kp*pitchERROR + ki*pitchERRORarea +kd*pitchdERRORdt;
 }
 */
