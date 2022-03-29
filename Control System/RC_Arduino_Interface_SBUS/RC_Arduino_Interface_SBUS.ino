@@ -20,8 +20,8 @@ void setup() {
     while(!Serial);
 
     //Begin SBUS communication
-    RX.begin();
-    TX.begin();
+    RX.Begin();
+    TX.Begin();
 
     //LED_BUILTIN
     pinMode(13, OUTPUT);
@@ -29,27 +29,21 @@ void setup() {
 }
 
 void loop() {
-    if(RX.read(){
+    if(RX.Read()){
         RXData = RX.ch();
         //Display received data
-        for(int8_t i=0; i<bfs::SbusRx::NUM_CH(); i++){
-            Serial.print(RXData[i]);
-            Serial.print("\t");
-        }
-        //Display lost frames and failsafe info
-        Serial.print(RX.lost_frame());
-        Serial.print("\t");
-        Serial.println(RX.failsafe());
+//        for(int8_t i=0; i<bfs::SbusRx::NUM_CH(); i++){
+//            Serial.print(RXData[i]);
+//            Serial.print("\t");
+//        }
+//        //Display lost frames and failsafe info
+//        Serial.print(RX.lost_frame());
+//        Serial.print("\t");
+//        Serial.println(RX.failsafe());
     }
-
 
   
-    if(pulse<2500){
-        channel = pulse;
-        Serial.println(channel);
-    }
-    
-    if(channel>1500 && channel<1900){
+    if(RXData[3]>1500 && RXData[1]<1500){
         digitalWrite(13, HIGH);
     }
     else
