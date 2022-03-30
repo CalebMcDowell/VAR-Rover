@@ -6,13 +6,10 @@ FrSky Receiver/Arduino UNO Interface
 #include "sbus.h"
 
 bfs::SbusRx RX(&Serial);  //Object for receiving
-bfs::SbusTx TX(&Serial);  //Object for transmitting
 std::array<int16_t, bfs::SbusRx::NUM_CH()> RXData; //Array for storing received data
+char ch[17] = {0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};  //Array to make channel programming easier
 
-
-volatile unsigned long pulse;
-volatile long sTime;
-volatile long cTime;
+char pwmPulse;
 
 void setup() {
     //Start serial
@@ -21,33 +18,14 @@ void setup() {
 
     //Begin SBUS communication
     RX.Begin();
-    TX.Begin();
 
     //LED_BUILTIN
     pinMode(13, OUTPUT);
-    
 }
 
 void loop() {
-    if(RX.Read()){
-        RXData = RX.ch();
-        //Display received data
-//        for(int8_t i=0; i<bfs::SbusRx::NUM_CH(); i++){
-//            Serial.print(RXData[i]);
-//            Serial.print("\t");
-//        }
-//        //Display lost frames and failsafe info
-//        Serial.print(RX.lost_frame());
-//        Serial.print("\t");
-//        Serial.println(RX.failsafe());
-    }
+    if(RX.Read()) RXData = RX.ch();
 
-  
-    if(RXData[3]>1500 && RXData[1]<1500){
-        digitalWrite(13, HIGH);
-    }
-    else
-        digitalWrite(13, LOW);
-    
-    delay(500);
+    pwmPulse = map(RXData[ch[3]],0,2047,0,255);
+    analogWrite(3,pwmPulse);
 }
