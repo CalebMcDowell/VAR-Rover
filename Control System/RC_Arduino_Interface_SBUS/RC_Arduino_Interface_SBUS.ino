@@ -18,14 +18,15 @@ void setup() {
 
     //Begin SBUS communication
     RX.Begin();
-
-    //LED_BUILTIN
-    pinMode(13, OUTPUT);
 }
 
 void loop() {
-    if(RX.Read()) RXData = RX.ch();
+    if(RX.Read()) RXData = RX.ch();      
 
-    pwmPulse = map(RXData[ch[3]],0,2047,0,255);
-    analogWrite(3,pwmPulse);
+    if(RXData[ch[3]]>150 && RXData[ch[3]]<1900){
+      pwmPulse = map(RXData[ch[3]],172,1811,125,254);
+      analogWrite(3,pwmPulse);
+    }
+    else
+      analogWrite(3,0);
 }
