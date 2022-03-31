@@ -27,8 +27,7 @@ Code to level an IMU on top of the tripod
     const int enB = 11;
     const int Back1 = 18;
     const int Back2 = 19;
-    
-    
+ 
 //////IMU Sensors//////
     Adafruit_BNO055 topImu = Adafruit_BNO055(55, 0x28);
     

@@ -1,9 +1,6 @@
 /*
 VAR Rover Senior Design Project
-FrSky Receiver/Arduino Nano Every Interface
-
-Author: cjm6756
-Last Edit: 01/30/22
+FrSky Receiver/Arduino UNO Interface
 */
 
 volatile unsigned long pulse[3];
