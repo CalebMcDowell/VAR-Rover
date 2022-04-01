@@ -3,6 +3,7 @@ VAR Rover Senior Design Project
 FrSky Receiver/Arduino UNO Interface
 */
 
+#include "VARRover.h"
 #include "sbus.h"
 
 bfs::SbusRx RX(&Serial);  //Object for receiving
