@@ -1,28 +1,38 @@
 //File: VARRover.cpp
 #include "VARRover.h"
 
-bfs::SbusRx RX(&Serial);  //Object for receiving
-
-void setup() {
-    //Serial communication between UNO and FrSky receiver
+////Constructor. Initialize rover
+Rover::Rover(void){
+    //Disarm rover
+    armed = 0;
+    //Serial SBUS communication between UNO and FrSky receiver
     Serial.begin(115200);
     while(!Serial);
-    //Begin SBUS communication
     RX.Begin();
 }
-
-//Function to get an array of the channel values. Returns 0 if error/failsafe/etc
-bool getRxData(std::array<int16_t, bfs::SbusRx::NUM_CH()> &channel){
+//Get an array of the channel values. Returns 0 if error/failsafe/etc
+bool Rover::getRxData(){
+    //if data to be read and rx not in failsafe mode
     if(RX.Read() && !RX.failsafe()){
-      channel = RX.ch();
-      int16_t temp = channel[bfs::SbusRx::NUM_CH()-1];
-      for(int i=bfs::SbusRx::NUM_CH()-1; i>=0; i--){
-        if(i==0)
-          channel[i] = temp;
-        else
-          channel[i] = channel[i-1];
+      //get all channel data
+      RxData = RX.ch();
+      if(RxData[2]>1500){
+        digitalWrite(LED_BUILTIN,HIGH);
+        delay(1000);
+        digitalWrite(LED_BUILTIN,LOW);
+        delay(1000);
       }
+      //success
+      return 1;
     }
-    else
-      return 0;
+
+    //failed
+    return 0;
+}
+//Returns desired channel value. channel(3) return ch3
+int Rover::channel(char dch) const{
+    if(dch<1 || dch>bfs::SbusRx::NUM_CH())// || !getRxData())
+      return -1;
+    
+    return RxData[dch-1];
 }
