@@ -10,8 +10,8 @@
     private:
       bool armed;                                         //rover armed
       std::array<int16_t, bfs::SbusRx::NUM_CH()> RxData;  //Array for storing received data
-      bfs::SbusRx RX{&Serial};  //Object for receiving
     public:
+      bfs::SbusRx RX{&Serial};  //Object for receiving
       Rover();
       bool isArmed(){return armed;}
       bool getRxData();

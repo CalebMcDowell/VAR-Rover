@@ -17,16 +17,14 @@ Rover otto;
 char pwmPulse;
 
 void setup() {
-  pinMode(LED_BUILTIN,OUTPUT);  
 }
 
 void loop() {
-  if (otto.channel(3));
-
-  if (otto.channel(3) > 1500) {
-    pwmPulse = map(otto.channel(3), 172, 1811, 125, 254);
+  otto.getRxData();
+//  if (otto.channel(3) > 1500) {
+//    pwmPulse = map(otto.channel(3), 172, 1811, 125, 254);
 //    digitalWrite(LED_BUILTIN,HIGH);
-  }
+//  }
 //  else
 //    digitalWrite(LED_BUILTIN,LOW);
 }
