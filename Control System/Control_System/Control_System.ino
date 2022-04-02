@@ -16,15 +16,25 @@
 Rover otto;
 char pwmPulse;
 
+
 void setup() {
+  //Serial SBUS communication between UNO and FrSky receiver
+  otto.RX.Begin();
 }
 
 void loop() {
-  otto.getRxData();
-//  if (otto.channel(3) > 1500) {
-//    pwmPulse = map(otto.channel(3), 172, 1811, 125, 254);
-//    digitalWrite(LED_BUILTIN,HIGH);
-//  }
-//  else
-//    digitalWrite(LED_BUILTIN,LOW);
+  while(!otto.getRxData()){
+      if(otto.RX.failsafe())
+        digitalWrite(5,HIGH);
+      else
+        digitalWrite(5,LOW);
+  }
+  
+  if (otto.channel(3) > 1200) {
+    pwmPulse = map(otto.channel(3), 172, 1811, 125, 254);
+    digitalWrite(LED_BUILTIN,HIGH);
+  }
+  else
+    digitalWrite(LED_BUILTIN,LOW);
+
 }
