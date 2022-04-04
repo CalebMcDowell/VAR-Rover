@@ -251,5 +251,22 @@ void PIDloop (){
 
     //rollVal = rollVal + kp*rollERROR + ki*rollERRORarea + kd*rolldERRORdt;
     //pitchVal = pitchVal + kp*pitchERROR + ki*pitchERRORarea +kd*pitchdERRORdt;
+
+    pacelo
+    pacehi
+    
+    rolllo
+    rollhi
+    rollmult
+
+    pitchlo
+    pitchhi
+    pitchmult
+
+    rollmult = ( rollVal - rolllo ) / ( rollhi - rolllo );
+    rollPACE = rollmult*(pacehi - pacelo) + pacelo;
+
+    pitchmult = ( pitchVal - pitchlo ) / ( pitchhi - pitchlo );
+    pitchPACE = pitchmult*(pacehi - pacelo) + pacelo;
 }
 */
