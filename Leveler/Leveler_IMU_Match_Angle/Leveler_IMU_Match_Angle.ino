@@ -252,16 +252,16 @@ void PIDloop (){
     //rollVal = rollVal + kp*rollERROR + ki*rollERRORarea + kd*rolldERRORdt;
     //pitchVal = pitchVal + kp*pitchERROR + ki*pitchERRORarea +kd*pitchdERRORdt;
 
-    pacelo
-    pacehi
+    float pacelo = 255; //Full Speed
+    float pacehi = 0; //Stopped
     
-    rolllo
-    rollhi
-    rollmult
+    float rolllo = 0; //Perfectly level
+    float rollhi = 40; // Farthest possible error value? Need to find this maximum.
+    float rollmult //multiplier
 
-    pitchlo
-    pitchhi
-    pitchmult
+    float pitchlo = 0; //Perfectly level
+    float pitchhi = 40; /Farthest possible error value.
+    float pitchmult;
 
     rollmult = ( rollVal - rolllo ) / ( rollhi - rolllo );
     rollPACE = rollmult*(pacehi - pacelo) + pacelo;
