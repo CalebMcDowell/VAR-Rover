@@ -18,16 +18,16 @@ char pwmPulse;
 
 
 void setup() {
-  //Serial SBUS communication between UNO and FrSky receiver
-  otto.RX.Begin();
+  pinMode(LED_BUILTIN,OUTPUT);
+  otto.init();
 }
 
 void loop() {
   while(!otto.getRxData()){
-      if(otto.RX.failsafe())
-        digitalWrite(5,HIGH);
+      if(otto.failsafe())
+        digitalWrite(LED_BUILTIN,HIGH);
       else
-        digitalWrite(5,LOW);
+        digitalWrite(LED_BUILTIN,LOW);
   }
   
   if (otto.channel(3) > 1200) {
