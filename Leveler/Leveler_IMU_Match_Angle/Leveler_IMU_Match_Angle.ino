@@ -27,17 +27,26 @@ Code to level an IMU on top of the tripod
     const int enB = 11;
     const int Back1 = 18;
     const int Back2 = 19;
-    
+
+//////PID Loop//////
+    float pitchTarget = 0;
+    float rollTarget = 0;
+    float pitch, roll;
+    int pSpeed, rSpeed;
+        
+    float pKP = 0.1, pKI = 0.0, pKD = 0.0;
+    float rKP = 0.1, rKI = 0.0, rKD = 0.0;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topImu = Adafruit_BNO055(55, 0x28);
     
 //////Function Declarations//////
 void move4Lvl(char ='S', unsigned char =0, int =0);
-void Pitch(unsigned char =0, int =0);
-void Roll(unsigned char =0, int =0);
+void Pitch(int =0);
+void Roll(int =0);
 void getIMUAngles(float &, float &);
-void PIDloop(float, float, byte &, byte &);
+int pitchPID(float);
+int rollPID(float);
 
 
 void setup() {
@@ -54,6 +63,7 @@ void setup() {
     pinMode(enR, OUTPUT);
     pinMode(R1, OUTPUT);
     pinMode(R2, OUTPUT);
+    move4Lvl('S');
     
     //IMU Sensor Setup
     topImu.begin();
@@ -64,47 +74,27 @@ void setup() {
 }
 
 void loop() {
-    byte pSpeed, rSpeed;
-    float angleRange = 2;
-    float pitch, roll;
-    
-    move4Lvl('S');
-    while(1){
       do{
         getIMUAngles(pitch, roll);
       }while(pitch==0 && roll==0);
 
-      if(roll>angleRange || roll<-angleRange){
-        PIDloop(roll, pitch, rSpeed, pSpeed);
-      }
-      else{
-        PIDloop(0,0,rSpeed,pSpeed);
-      }
-      Serial.print("Pitch:");
-      Serial.print(pitch);
-      Serial.print("\t");
+//      pSpeed = pitchPID(pitch);
+      rSpeed = rollPID(roll);
+//      Serial.print("Pitch:");
+//      Serial.print(pitch);
+//      Serial.print("\t");
       Serial.print("Roll:");
       Serial.print(roll);
       Serial.print("\t");
-      Serial.print("pSpeed: ");
-      Serial.print(pSpeed);
-      Serial.print("\t");
+//      Serial.print("pSpeed: ");
+//      Serial.print(pSpeed);
+//      Serial.print("\t");
       Serial.print("rSpeed: ");
       Serial.print(rSpeed);
       Serial.println("\t");
 
-//      Pitch(pSpeed, pitch);
-      Roll(rSpeed, roll);
-//      if(pitch>angleRange || pitch<-angleRange)
-//        Pitch(pSpeed, pitch);
-//      else
-//        Pitch(0);
-//      if(roll>angleRange || roll<-angleRange)
-//        Roll(rSpeed, roll);
-//      else
-//        Roll(0);
-    }
-    
+//      Pitch(pSpeed);
+      Roll(rSpeed);
 }
 
 void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
@@ -160,8 +150,7 @@ void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
      analogWrite(enF,pace);
      analogWrite(enB,pace);
 }
-
-void Pitch(unsigned char pace=0, int angle=0){
+void Pitch(int pace=0){
     //stop actuators if no pace
     if(pace==0){
       digitalWrite(F1,0);
@@ -170,21 +159,20 @@ void Pitch(unsigned char pace=0, int angle=0){
       digitalWrite(Back2,0);
       return;
     }
-    
+
+    pace = constrain(pace, -255, 255);
     //Set direction of movement
     bool d = 1;  //positive direction
-    if(angle<0) d = 0;  //negative direction
+    if(pace<0) d = 0;  //negative direction
     digitalWrite(F1,d);
     digitalWrite(F2,!d);
     digitalWrite(Back1,d);
     digitalWrite(Back2,!d);
-    
     //Set speed of motors
-    analogWrite(enF,pace);
-    analogWrite(enB,pace);
+    analogWrite(enF,abs(pace));
+    analogWrite(enB,abs(pace));
 }
-
-void Roll(unsigned char pace=0, int angle=0){
+void Roll(int pace=0){
     //stop actuators if no pace
     if(pace==0){
       digitalWrite(L1,0);
@@ -194,19 +182,18 @@ void Roll(unsigned char pace=0, int angle=0){
       return;
     }
 
+    pace = constrain(pace, -255, 255);
     //Set direction of movement
     bool d = 1;  //positive direction
-    if(angle<0) d = 0;  //negative direction
+    if(pace<0) d = 0;  //negative direction
     digitalWrite(L1,d);
     digitalWrite(L2,!d);
     digitalWrite(R1,d);
     digitalWrite(R2,!d);
-    
     //Set speed of motors
-    analogWrite(enL,pace);
-    analogWrite(enR,pace);
+    analogWrite(enL,abs(pace));
+    analogWrite(enR,abs(pace));
 }
-
 void getIMUAngles(float &newPitch, float &newRoll){
     //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
     imu::Vector<3> euler = topImu.getVector(Adafruit_BNO055::VECTOR_EULER);
@@ -223,53 +210,35 @@ void getIMUAngles(float &newPitch, float &newRoll){
 //    newPitch=newPitch/(3.14159265)*180;
 //    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
-
-void PIDloop (float rollACTUAL, float pitchACTUAL, byte &rollPACE, byte &pitchPACE){
-   static int tOLD, tNEW, dt;
-   
-   float kp = 0.1;
-   float ki = 0.0;
-   float kd = 0.0;
-   
-   static float rollTARGET = 0.0;
-   static float rollERROR, rollERRORold, rolldERROR, rolldERRORdt, rollERRORarea;
-   static float rollVal;
-   
-   static float pitchTARGET = 0.0;
-   static float pitchERROR, pitchERRORold, pitchdERROR, pitchdERRORdt, pitchERRORarea;
-   static float pitchVal;
-
-    tOLD = tNEW;
-    tNEW = millis();
-    dt = tNEW - tOLD;
+int rollPID(float curRoll){
+    static float rErr = 0, rErrPrev = 0, rIntErr = 0;
+    static unsigned long curTime = 0, prevTime = 0;
     
-    rollERRORold = rollERROR;
-    rollERROR = rollTARGET - rollACTUAL;
-    rolldERROR = rollERROR - rollERRORold;
-    rolldERRORdt = rolldERROR/dt;
-    rollERRORarea = rollERRORarea+rollERROR*dt;
+    //Derivative
+    rErrPrev = rErr;
+    prevTime = curTime;
+    curTime = millis();
+    //Propotional
+    rErr = rollTarget-curRoll;
+    //Integral
+    rIntErr += (rErr*(curTime-prevTime));
 
-    pitchERRORold = pitchERROR;
-    pitchERROR = pitchTARGET - pitchACTUAL;
-    pitchdERROR = pitchERROR - pitchERRORold;
-    pitchdERRORdt = pitchdERROR/dt;
-    pitchERRORarea = pitchERRORarea+pitchERROR*dt;
-
-//    rollVal = rollVal + (kp*rollERROR) + (ki*rollERRORarea) + (kd*rolldERRORdt);
-//    pitchVal = pitchVal + (kp*pitchERROR) + (ki*pitchERRORarea) + (kd*pitchdERRORdt);
-    rollVal = (kp*rollERROR) + (ki*rollERRORarea) + (kd*rolldERRORdt);
-    pitchVal = (kp*pitchERROR) + (ki*pitchERRORarea) + (kd*pitchdERRORdt);
+    float output = (rKP*rErr) + (rKI*rIntErr) + (rKD*((rErr-rErrPrev)/float(curTime-prevTime)));
+    return int(constrain(output, -255, 255));
+}
+int pitchPID(float curPitch){
+    static float pErr = 0, pErrPrev = 0, pIntErr = 0;
+    static unsigned long curTime = 0, prevTime = 0;
     
-    float rolllo = 0.0;     //Perfectly level
-    float rollhi = 180.0;   // Farthest possible error value? Need to find this maximum.
-    float pitchlo = 0.0;    //Perfectly level
-    float pitchhi = 180.0;  //Farthest possible error value.
+    //Derivative
+    pErrPrev = pErr;
+    prevTime = curTime;
+    curTime = millis();
+    //Propotional
+    pErr = pitchTarget-curPitch;
+    //Integral
+    pIntErr += (pErr*(curTime-prevTime));
 
-    rollPACE = min(byte(abs(rollVal)), byte(rollhi));
-    rollPACE = max(byte(abs(rollVal)), byte(rolllo));
-    rollPACE = byte(rollPACE);
-
-    pitchPACE = min(byte(abs(pitchVal)), byte(pitchhi));
-    pitchPACE = max(byte(abs(pitchVal)), byte(pitchlo));
-    pitchPACE = byte(pitchPACE);
+    float output = (pKP*pErr) + (pKI*pIntErr) + (pKD*((pErr-pErrPrev)/float(curTime-prevTime)));
+    return int(constrain(output, -255, 255));
 }
