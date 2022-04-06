@@ -37,6 +37,7 @@ void move4Lvl(char ='S', unsigned char =0, int =0);
 void Pitch(unsigned char =0, int =0);
 void Roll(unsigned char =0, int =0);
 void getIMUAngles(float &, float &);
+void PIDloop(float, float, byte &, byte &);
 
 
 void setup() {
@@ -59,30 +60,49 @@ void setup() {
     topImu.setExtCrystalUse(true);
 
     delay(1000);
-    
-//    Serial.begin(9600);
+    Serial.begin(9600);
 }
 
 void loop() {
-    unsigned char speed = 100;
-    unsigned char angleRange = 1;
+    byte pSpeed, rSpeed;
+    float angleRange = 2;
     float pitch, roll;
     
     move4Lvl('S');
     while(1){
-      getIMUAngles(pitch, roll);
-//      Serial.print(pitch);
-//      Serial.print("\t");
-//      Serial.println(roll);
+      do{
+        getIMUAngles(pitch, roll);
+      }while(pitch==0 && roll==0);
 
-      if(pitch>angleRange || pitch<-angleRange)
-        Pitch(speed, pitch);
-      else
-        Pitch(0);
-      if(roll>angleRange || roll<-angleRange)
-        Roll(speed, roll);
-      else
-        Roll(0);
+      if(roll>angleRange || roll<-angleRange){
+        PIDloop(roll, pitch, rSpeed, pSpeed);
+      }
+      else{
+        PIDloop(0,0,rSpeed,pSpeed);
+      }
+      Serial.print("Pitch:");
+      Serial.print(pitch);
+      Serial.print("\t");
+      Serial.print("Roll:");
+      Serial.print(roll);
+      Serial.print("\t");
+      Serial.print("pSpeed: ");
+      Serial.print(pSpeed);
+      Serial.print("\t");
+      Serial.print("rSpeed: ");
+      Serial.print(rSpeed);
+      Serial.println("\t");
+
+//      Pitch(pSpeed, pitch);
+      Roll(rSpeed, roll);
+//      if(pitch>angleRange || pitch<-angleRange)
+//        Pitch(pSpeed, pitch);
+//      else
+//        Pitch(0);
+//      if(roll>angleRange || roll<-angleRange)
+//        Roll(rSpeed, roll);
+//      else
+//        Roll(0);
     }
     
 }
@@ -204,39 +224,25 @@ void getIMUAngles(float &newPitch, float &newRoll){
 //    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
 
-/*
-void PIDloop (){
-   int tOLD;
-   int tNEW;
-   int dt;
+void PIDloop (float rollACTUAL, float pitchACTUAL, byte &rollPACE, byte &pitchPACE){
+   static int tOLD, tNEW, dt;
    
-   float kp;
-   float ki;
-   float kd;
+   float kp = 0.1;
+   float ki = 0.0;
+   float kd = 0.0;
    
-   float rollTARGET;
-   float rollACTUAL;
-   float rollERROR;
-   float rollERRORold;
-   float rolldERROR;
-   float rolldERRORdt;
-   float rollERRORarea;
-// float rollVal;
+   static float rollTARGET = 0.0;
+   static float rollERROR, rollERRORold, rolldERROR, rolldERRORdt, rollERRORarea;
+   static float rollVal;
+   
+   static float pitchTARGET = 0.0;
+   static float pitchERROR, pitchERRORold, pitchdERROR, pitchdERRORdt, pitchERRORarea;
+   static float pitchVal;
 
-   float pitchTARGET;
-   float pitchActual;
-   float pitchERROR;
-   float pitchERRORold;
-   float pitchdERROR;
-   float pitchdERRORdt;
-   float rollERRORarea;
-// float pitchVal;
-
-    milliOLD = milliNEW;
-    milliNEW = millis();
-
-    dt = milliNEW - milliOLD;
-
+    tOLD = tNEW;
+    tNEW = millis();
+    dt = tNEW - tOLD;
+    
     rollERRORold = rollERROR;
     rollERROR = rollTARGET - rollACTUAL;
     rolldERROR = rollERROR - rollERRORold;
@@ -249,24 +255,21 @@ void PIDloop (){
     pitchdERRORdt = pitchdERROR/dt;
     pitchERRORarea = pitchERRORarea+pitchERROR*dt;
 
-    //rollVal = rollVal + kp*rollERROR + ki*rollERRORarea + kd*rolldERRORdt;
-    //pitchVal = pitchVal + kp*pitchERROR + ki*pitchERRORarea +kd*pitchdERRORdt;
-
-    float pacelo = 255; //Full Speed
-    float pacehi = 0; //Stopped
+//    rollVal = rollVal + (kp*rollERROR) + (ki*rollERRORarea) + (kd*rolldERRORdt);
+//    pitchVal = pitchVal + (kp*pitchERROR) + (ki*pitchERRORarea) + (kd*pitchdERRORdt);
+    rollVal = (kp*rollERROR) + (ki*rollERRORarea) + (kd*rolldERRORdt);
+    pitchVal = (kp*pitchERROR) + (ki*pitchERRORarea) + (kd*pitchdERRORdt);
     
-    float rolllo = 0; //Perfectly level
-    float rollhi = 40; // Farthest possible error value? Need to find this maximum.
-    float rollmult //multiplier
+    float rolllo = 0.0;     //Perfectly level
+    float rollhi = 180.0;   // Farthest possible error value? Need to find this maximum.
+    float pitchlo = 0.0;    //Perfectly level
+    float pitchhi = 180.0;  //Farthest possible error value.
 
-    float pitchlo = 0; //Perfectly level
-    float pitchhi = 40; /Farthest possible error value.
-    float pitchmult;
+    rollPACE = min(byte(abs(rollVal)), byte(rollhi));
+    rollPACE = max(byte(abs(rollVal)), byte(rolllo));
+    rollPACE = byte(rollPACE);
 
-    rollmult = ( rollVal - rolllo ) / ( rollhi - rolllo );
-    rollPACE = rollmult*(pacehi - pacelo) + pacelo;
-
-    pitchmult = ( pitchVal - pitchlo ) / ( pitchhi - pitchlo );
-    pitchPACE = pitchmult*(pacehi - pacelo) + pacelo;
+    pitchPACE = min(byte(abs(pitchVal)), byte(pitchhi));
+    pitchPACE = max(byte(abs(pitchVal)), byte(pitchlo));
+    pitchPACE = byte(pitchPACE);
 }
-*/
