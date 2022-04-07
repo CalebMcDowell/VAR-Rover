@@ -4,9 +4,9 @@
 ///////////////SBUS CLASS METHODS///////////////
 void SbusRx::Begin() {
   /* Start the bus */
-  Serial.begin(BAUD_, SERIAL_8E2);
+  Serial1.begin(BAUD_, SERIAL_8E2);
   /* flush the bus */
-  Serial.flush();
+  Serial1.flush();
 }
 bool SbusRx::Read() {
   /* Read through all available packets to get the newest */
@@ -15,7 +15,7 @@ bool SbusRx::Read() {
     if (Parse()) {
       new_data_ = true;
     }
-  } while (Serial.available());
+  } while (Serial1.available());
   /* Parse new data, if available */
   if (new_data_) {
     /* Grab the channel data */
@@ -52,8 +52,8 @@ bool SbusRx::Read() {
 }
 bool SbusRx::Parse() {
   /* Parse messages */
-  while (Serial.available()) {
-    cur_byte_ = Serial.read();
+  while (Serial1.available()) {
+    cur_byte_ = Serial1.read();
     if (state_ == 0) {
       if ((cur_byte_ == HEADER_) && ((prev_byte_ == FOOTER_) ||
          ((prev_byte_ & 0x0F) == FOOTER2_))) {
@@ -83,10 +83,10 @@ bool SbusRx::Parse() {
 //Initialize rover
 bool Rover::init(){
   //Drivetrain setup
-  pinMode(FL,OUTPUT);
-  pinMode(FR,OUTPUT);
-  pinMode(BL,OUTPUT);
-  pinMode(BR,OUTPUT);
+//  pinMode(FL,OUTPUT);
+//  pinMode(FR,OUTPUT);
+//  pinMode(BL,OUTPUT);
+//  pinMode(BR,OUTPUT);
   //Lift setup  
   //Disarm rover
   armed = 0;
@@ -94,6 +94,14 @@ bool Rover::init(){
   RX.Begin();
   
   return true;
+}
+//Disarms all rover systems
+bool Rover::disarm(){
+    armed = 0;
+    analogWrite(FL,0);
+    analogWrite(BL,0);
+    analogWrite(FR,0);
+    analogWrite(BR,0);
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
 bool Rover::getRxData(){
@@ -115,9 +123,44 @@ int Rover::channel(byte dch) const{
     
     return RxData[dch-1];
 }
-//Rover drivetrain
-void Rover::drive(){
-
-  
+//print all channel data
+void Rover::printChannels() const{
+    for(int i=1; i<=16; i++){
+      Serial.print("CH");
+      Serial.print(i);
+      Serial.print(":");
+      Serial.print(channel(i));
+      Serial.print(" ");
+    }
+    Serial.println("");
 }
+
+//drive control
+void Rover::drive(){
+  if(failsafe() || !armed){
+    analogWrite(FL,0);
+    analogWrite(BL,0);
+    analogWrite(FR,0);
+    analogWrite(BR,0);
+  }
+  if(channel(3)>150 && channel(3)<1900){
+      byte PWM_F=byte((((float(channel(3))-172)/(1811-172))*(254-122))+122) ;
+      byte PWM_B=byte((((1811-(float(channel(3))))/(1811-172))*(254-122))+122);
+      analogWrite(FL,PWM_F);
+      analogWrite(BL,PWM_F);
+      analogWrite(FR,PWM_B);
+      analogWrite(BR,PWM_B);
+//      Serial.print(channel(3));
+//      Serial.print("\t");
+//      Serial.print(PWM_F);
+//      Serial.print("\t");
+//      Serial.println(PWM_B);
+  }
+  else{
+      analogWrite(FL,0);
+      analogWrite(BL,0);
+      analogWrite(FR,0);
+      analogWrite(BR,0);
+  }
+
 }

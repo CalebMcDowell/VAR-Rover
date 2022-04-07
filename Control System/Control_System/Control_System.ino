@@ -14,12 +14,12 @@
 #include "VARRover.h"
 
 Rover otto;
-char pwmPulse;
 
 
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
   pinMode(5,OUTPUT);
+  Serial.begin(9600);
   otto.init();
 }
 
@@ -30,12 +30,13 @@ void loop() {
       else
         digitalWrite(5,LOW);
   }
-  
-  if (otto.channel(3) > 1200) {
-    pwmPulse = map(otto.channel(3), 172, 1811, 125, 254);
-    digitalWrite(LED_BUILTIN,HIGH);
+  if(otto.channel(5) >= 1800){
+      otto.arm();
   }
-  else
-    digitalWrite(LED_BUILTIN,LOW);
-
+  else{
+      otto.disarm();
+  }
+  if(otto.isArmed()){
+      otto.drive();
+  }
 }
