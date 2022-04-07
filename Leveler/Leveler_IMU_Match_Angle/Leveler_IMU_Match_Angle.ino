@@ -32,10 +32,11 @@ Code to level an IMU on top of the tripod
     float pitchTarget = 0;
     float rollTarget = 0;
     float pitch, roll;
+    float angleRange = 0.5;
     int pSpeed, rSpeed;
         
-    float pKP = 0.1, pKI = 0.0, pKD = 0.0;
-    float rKP = 0.1, rKI = 0.0, rKD = 0.0;
+    float pKP = 15, pKI = 0.015, pKD = 300;
+    float rKP = 15, rKI = 0.015, rKD = 300;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topImu = Adafruit_BNO055(55, 0x28);
@@ -77,24 +78,33 @@ void loop() {
       do{
         getIMUAngles(pitch, roll);
       }while(pitch==0 && roll==0);
-
-//      pSpeed = pitchPID(pitch);
-      rSpeed = rollPID(roll);
-//      Serial.print("Pitch:");
-//      Serial.print(pitch);
-//      Serial.print("\t");
+      
+      if(abs(pitch) > angleRange){
+        pSpeed = pitchPID(pitch);
+        Pitch(pSpeed);
+      }
+      else{
+        Pitch(0);
+      }
+      if(abs(roll) > angleRange){
+        rSpeed = rollPID(roll);
+        Roll(rSpeed);
+      }
+      else{
+        Roll(0);
+      }
+      Serial.print("Pitch:");
+      Serial.print(pitch);
+      Serial.print("\t");
       Serial.print("Roll:");
       Serial.print(roll);
       Serial.print("\t");
-//      Serial.print("pSpeed: ");
-//      Serial.print(pSpeed);
-//      Serial.print("\t");
+      Serial.print("pSpeed: ");
+      Serial.print(pSpeed);
+      Serial.print("\t");
       Serial.print("rSpeed: ");
       Serial.print(rSpeed);
       Serial.println("\t");
-
-//      Pitch(pSpeed);
-      Roll(rSpeed);
 }
 
 void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
@@ -163,7 +173,7 @@ void Pitch(int pace=0){
     pace = constrain(pace, -255, 255);
     //Set direction of movement
     bool d = 1;  //positive direction
-    if(pace<0) d = 0;  //negative direction
+    if(pace>0) d = 0;  //negative direction
     digitalWrite(F1,d);
     digitalWrite(F2,!d);
     digitalWrite(Back1,d);
@@ -185,7 +195,7 @@ void Roll(int pace=0){
     pace = constrain(pace, -255, 255);
     //Set direction of movement
     bool d = 1;  //positive direction
-    if(pace<0) d = 0;  //negative direction
+    if(pace>0) d = 0;  //negative direction
     digitalWrite(L1,d);
     digitalWrite(L2,!d);
     digitalWrite(R1,d);
@@ -221,7 +231,12 @@ int rollPID(float curRoll){
     //Propotional
     rErr = rollTarget-curRoll;
     //Integral
-    rIntErr += (rErr*(curTime-prevTime));
+    if(curRoll<3 && curRoll>-3){
+      rIntErr += (rErr*(curTime-prevTime));
+    }
+    else{
+      rIntErr = 0.0;
+    }
 
     float output = (rKP*rErr) + (rKI*rIntErr) + (rKD*((rErr-rErrPrev)/float(curTime-prevTime)));
     return int(constrain(output, -255, 255));
@@ -237,7 +252,12 @@ int pitchPID(float curPitch){
     //Propotional
     pErr = pitchTarget-curPitch;
     //Integral
-    pIntErr += (pErr*(curTime-prevTime));
+    if(curPitch<3.0 && curPitch>-3.0){
+      pIntErr += (pErr*(curTime-prevTime));
+    }
+    else{
+      pIntErr = 0.0;
+    }
 
     float output = (pKP*pErr) + (pKI*pIntErr) + (pKD*((pErr-pErrPrev)/float(curTime-prevTime)));
     return int(constrain(output, -255, 255));
