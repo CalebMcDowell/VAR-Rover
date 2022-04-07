@@ -19,15 +19,16 @@ char pwmPulse;
 
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
+  pinMode(5,OUTPUT);
   otto.init();
 }
 
 void loop() {
   while(!otto.getRxData()){
       if(otto.failsafe())
-        digitalWrite(LED_BUILTIN,HIGH);
+        digitalWrite(5,HIGH);
       else
-        digitalWrite(LED_BUILTIN,LOW);
+        digitalWrite(5,LOW);
   }
   
   if (otto.channel(3) > 1200) {

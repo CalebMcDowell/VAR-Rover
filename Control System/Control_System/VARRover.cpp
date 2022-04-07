@@ -83,6 +83,10 @@ bool SbusRx::Parse() {
 //Initialize rover
 bool Rover::init(){
   //Drivetrain setup
+  pinMode(FL,OUTPUT);
+  pinMode(FR,OUTPUT);
+  pinMode(BL,OUTPUT);
+  pinMode(BR,OUTPUT);
   //Lift setup  
   //Disarm rover
   armed = 0;
@@ -110,4 +114,10 @@ int Rover::channel(byte dch) const{
       return -1;
     
     return RxData[dch-1];
+}
+//Rover drivetrain
+void Rover::drive(){
+
+  
+}
 }

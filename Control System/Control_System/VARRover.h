@@ -53,10 +53,10 @@
       SbusRx RX;                                    //Object for receiving
       std::array<int16_t, SbusRx::NUM_CH()> RxData; //Array for storing received data
       //Drivetrain pins
-      byte FL = 1                                   //Front Left
-          ,FR = 2                                   //Front Right
-          ,BL = 3                                   //Back Left
-          ,BR = 4;                                  //Back Right
+      byte FL = 8                                   //Front Left
+          ,FR = 9                                   //Front Right
+          ,BL = 10                                   //Back Left
+          ,BR = 11;                                  //Back Right
       //Lift pins
       byte LIFT = 5;
       //Sensor pins
@@ -69,6 +69,7 @@
       bool failsafe(){return RX.failsafe();};
       bool getRxData();
       int channel(byte) const;
+      void drive();
   }; //end Rover
 
 #endif  // VARROVER_H
