@@ -3,10 +3,10 @@ VAR Rover Senior Design Project
 Code to level an IMU on top of the tripod
 */
 //////Includes//////
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BNO055.h>
+#include <Adafruit_Sensor.h>  //Requires "Adafruit Unified Sensor" library (v1.1.5)
+#include <Adafruit_BNO055.h>  //Requires "Adafruit BNO055" library (v1.5.2)
 #include <Arduino.h>
-#include <TinyMPU6050.h>
+#include <TinyMPU6050.h>      //Requires "TinyMPU6050" library (v0.5.3)
 #include <Wire.h>
 #include <utility/imumaths.h>
 
