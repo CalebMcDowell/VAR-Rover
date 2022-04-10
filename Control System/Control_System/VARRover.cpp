@@ -83,11 +83,9 @@ bool SbusRx::Parse() {
 //Initialize rover
 bool Rover::init(){
   //Drivetrain setup
-//  pinMode(FL,OUTPUT);
-//  pinMode(FR,OUTPUT);
-//  pinMode(BL,OUTPUT);
-//  pinMode(BR,OUTPUT);
+  
   //Lift setup  
+  
   //Disarm rover
   armed = 0;
   //Begin SBUS communication with receiver
@@ -143,18 +141,21 @@ void Rover::drive(){
     analogWrite(FR,0);
     analogWrite(BR,0);
   }
-  if(channel(3)>150 && channel(3)<1900){
-      byte PWM_F=byte((((float(channel(3))-172)/(1811-172))*(254-122))+122) ;
-      byte PWM_B=byte((((1811-(float(channel(3))))/(1811-172))*(254-122))+122);
-      analogWrite(FL,PWM_F);
-      analogWrite(BL,PWM_F);
-      analogWrite(FR,PWM_B);
-      analogWrite(BR,PWM_B);
-//      Serial.print(channel(3));
-//      Serial.print("\t");
-//      Serial.print(PWM_F);
-//      Serial.print("\t");
-//      Serial.println(PWM_B);
+  if(channel(2)>150 && channel(2)<1900 && channel(3)>150 && channel(3)<1900){
+      //forward/backward calculations
+      int PWM_FB=int((((float(channel(3))-172)/(1811-172))*(254-122))+122)-188 ;
+      //turning calculations
+      int PWM_LR=int(((((float(channel(2))-172))/(1811-172))*(254-122))+122)-188;
+      //invert LR if driving backwards
+      if(PWM_FB<0)
+        PWM_LR = -PWM_LR;
+      //write speed to motors, limit to within acceptable range
+      byte LeftOutput = constrain(188+PWM_FB+PWM_LR, 122, 254);
+      byte RightOutput = constrain(188-PWM_FB+PWM_LR, 122, 254);
+      analogWrite(FL,LeftOutput);
+      analogWrite(BL,LeftOutput);
+      analogWrite(FR,RightOutput);
+      analogWrite(BR,RightOutput);
   }
   else{
       analogWrite(FL,0);
