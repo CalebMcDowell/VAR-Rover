@@ -31,14 +31,17 @@ Code to level an IMU on top of the tripod
     const int Back2 = 19;
 
 //////PID Loop//////
+    float levelLimit = 20;
     float pitchTarget = 0;
     float rollTarget = 0;
     float pitch, roll, bPitch, bRoll;
     float angleRange = 0.5;
     int pSpeed, rSpeed;
         
-    float pKP = 15, pKI = 0.015, pKD = 300;
-    float rKP = 15, rKI = 0.015, rKD = 300;
+//    float pKP = 18, pKI = 0.015, pKD = 300;
+//    float rKP = 18, rKI = 0.015, rKD = 300;
+    float pKP = 18, pKI = 0.015, pKD = 0;
+    float rKP = 18, rKI = 0.015, rKD = 0;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topIMU = Adafruit_BNO055(55, 0x28);
@@ -55,6 +58,7 @@ int rollPID(float);
 
 
 void setup() {
+    delay(1000);
     //General
     pinMode(LED_BUILTIN, OUTPUT);
     
@@ -77,28 +81,44 @@ void setup() {
     topIMU.begin();
     topIMU.setExtCrystalUse(true);
     bottomIMU.Initialize();
-    digitalWrite(LED_BUILTIN, HIGH);
-    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
-    digitalWrite(LED_BUILTIN, LOW);
+//    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
+    Wire.setWireTimeout(3000,true);
 
     Serial.begin(9600);
 }
-
 void loop() {
       do{
         getTopIMUAngles(pitch, roll);
       }while(pitch==0 && roll==0);
 
       getBotIMUAngles(bPitch, bRoll);
+      if(bPitch > levelLimit){
+        pitchTarget = bPitch-levelLimit;
+      }
+      else if(bPitch < -levelLimit){
+        pitchTarget = bPitch+levelLimit;
+      }
+      else{
+        pitchTarget = 0;
+      }
+      if(bRoll > levelLimit){
+        rollTarget = bRoll-levelLimit;
+      }
+      else if(bRoll < -levelLimit){
+        rollTarget = bRoll+levelLimit;
+      }
+      else{
+        rollTarget = 0;
+      }
       
-      if(abs(pitch) > angleRange){
+      if(abs(pitch-pitchTarget) > angleRange){
         pSpeed = pitchPID(pitch);
         Pitch(pSpeed);
       }
       else{
         Pitch(0);
       }
-      if(abs(roll) > angleRange){
+      if(abs(roll-rollTarget) > angleRange){
         rSpeed = rollPID(roll);
         Roll(rSpeed);
       }
@@ -117,6 +137,10 @@ void loop() {
       Serial.print(pSpeed);
       Serial.print("\trSpeed: ");
       Serial.print(rSpeed);
+      Serial.print("\tpTarget: ");
+      Serial.print(pitchTarget);
+      Serial.print("\trTarget: ");
+      Serial.print(rollTarget);
       Serial.println();
 }
 
@@ -234,9 +258,14 @@ void getTopIMUAngles(float &newTopPitch, float &newTopRoll){
 //    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
 void getBotIMUAngles(float &newBotPitch, float &newBotRoll){
+    Wire.clearWireTimeoutFlag();
     bottomIMU.Execute();
-    newBotPitch = bottomIMU.GetAngX();
-    newBotRoll = bottomIMU.GetAngY();
+    if(Wire.getWireTimeoutFlag()){
+      Serial.print("TIMEOUT ERROR\t");
+      return;
+    }
+    newBotRoll = bottomIMU.GetAngX();
+    newBotPitch = bottomIMU.GetAngY();
 }
 int rollPID(float curRoll){
     static float rErr = 0, rErrPrev = 0, rIntErr = 0;
