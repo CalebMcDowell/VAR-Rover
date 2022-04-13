@@ -35,7 +35,7 @@ Code to level an IMU on top of the tripod
     float pitchTarget = 0;
     float rollTarget = 0;
     float pitch, roll, bPitch, bRoll;
-    float angleRange = 0.25;
+    float angleRange = 0.5;
     int pSpeed, rSpeed;
         
     float pKP = 18, pKI = 0.035, pKD = 400;
