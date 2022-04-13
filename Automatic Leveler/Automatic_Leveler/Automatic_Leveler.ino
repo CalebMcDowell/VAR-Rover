@@ -35,24 +35,24 @@ Code to level an IMU on top of the tripod
     float pitchTarget = 0;
     float rollTarget = 0;
     float pitch, roll, bPitch, bRoll;
-    float angleRange = 0.5;
+    float angleRange = 0.25;
     int pSpeed, rSpeed;
         
-//    float pKP = 18, pKI = 0.015, pKD = 300;
-//    float rKP = 18, rKI = 0.015, rKD = 300;
-    float pKP = 18, pKI = 0.015, pKD = 0;
-    float rKP = 18, rKI = 0.015, rKD = 0;
+    float pKP = 18, pKI = 0.035, pKD = 400;
+    float rKP = 18, rKI = 0.035, rKD = 400;
+//    float pKP = 18, pKI = 0.015, pKD = 0;
+//    float rKP = 18, rKI = 0.015, rKD = 0;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topIMU = Adafruit_BNO055(55, 0x28);
-    MPU6050 bottomIMU(Wire);
+    //MPU6050 bottomIMU(Wire);
     
 //////Function Declarations//////
 void move4Lvl(char ='S', unsigned char =0, int =0);
 void Pitch(int =0);
 void Roll(int =0);
 void getTopIMUAngles(float &, float &);
-void getBotIMUAngles(float &, float &);
+//void getBotIMUAngles(float &, float &);
 int pitchPID(float);
 int rollPID(float);
 
@@ -80,9 +80,9 @@ void setup() {
     //IMU Sensor Setup
     topIMU.begin();
     topIMU.setExtCrystalUse(true);
-    bottomIMU.Initialize();
+   // bottomIMU.Initialize();
 //    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
-    Wire.setWireTimeout(3000,true);
+   // Wire.setWireTimeout(3000,true);
 
     Serial.begin(9600);
 }
@@ -91,25 +91,25 @@ void loop() {
         getTopIMUAngles(pitch, roll);
       }while(pitch==0 && roll==0);
 
-      getBotIMUAngles(bPitch, bRoll);
-      if(bPitch > levelLimit){
-        pitchTarget = bPitch-levelLimit;
-      }
-      else if(bPitch < -levelLimit){
-        pitchTarget = bPitch+levelLimit;
-      }
-      else{
-        pitchTarget = 0;
-      }
-      if(bRoll > levelLimit){
-        rollTarget = bRoll-levelLimit;
-      }
-      else if(bRoll < -levelLimit){
-        rollTarget = bRoll+levelLimit;
-      }
-      else{
-        rollTarget = 0;
-      }
+//      getBotIMUAngles(bPitch, bRoll);
+//      if(bPitch > levelLimit){
+//        pitchTarget = bPitch-levelLimit;
+//      }
+//      else if(bPitch < -levelLimit){
+//        pitchTarget = bPitch+levelLimit;
+//      }
+//      else{
+//        pitchTarget = 0;
+//      }
+//      if(bRoll > levelLimit){
+//        rollTarget = bRoll-levelLimit;
+//      }
+//      else if(bRoll < -levelLimit){
+//        rollTarget = bRoll+levelLimit;
+//      }
+//      else{
+//        rollTarget = 0;
+//      }
       
       if(abs(pitch-pitchTarget) > angleRange){
         pSpeed = pitchPID(pitch);
@@ -129,10 +129,10 @@ void loop() {
       Serial.print(pitch);
       Serial.print("\tRoll:");
       Serial.print(roll);
-      Serial.print("\tbPitch:");
-      Serial.print(bPitch);
-      Serial.print("\tbRoll:");
-      Serial.print(bRoll);
+     // Serial.print("\tbPitch:");
+     // Serial.print(bPitch);
+     // Serial.print("\tbRoll:");
+     //Serial.print(bRoll);
       Serial.print("\tpSpeed: ");
       Serial.print(pSpeed);
       Serial.print("\trSpeed: ");
@@ -257,16 +257,16 @@ void getTopIMUAngles(float &newTopPitch, float &newTopRoll){
 //    newPitch=newPitch/(3.14159265)*180;
 //    //For quaternions, reference: https://www.youtube.com/watch?v=S77r-P6YxAU&list=PLGs0VKk2DiYwEo-k0mjIkWXlkrJWAU4L9&index=21
 }
-void getBotIMUAngles(float &newBotPitch, float &newBotRoll){
-    Wire.clearWireTimeoutFlag();
-    bottomIMU.Execute();
-    if(Wire.getWireTimeoutFlag()){
-      Serial.print("TIMEOUT ERROR\t");
-      return;
-    }
-    newBotRoll = bottomIMU.GetAngX();
-    newBotPitch = bottomIMU.GetAngY();
-}
+//void getBotIMUAngles(float &newBotPitch, float &newBotRoll){
+//    Wire.clearWireTimeoutFlag();
+//    bottomIMU.Execute();
+//    if(Wire.getWireTimeoutFlag()){
+//      Serial.print("TIMEOUT ERROR\t");
+//      return;
+//    }
+//    newBotRoll = bottomIMU.GetAngX();
+//    newBotPitch = bottomIMU.GetAngY();
+//}
 int rollPID(float curRoll){
     static float rErr = 0, rErrPrev = 0, rIntErr = 0;
     static unsigned long curTime = 0, prevTime = 0;
