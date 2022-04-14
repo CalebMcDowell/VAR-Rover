@@ -83,14 +83,18 @@ bool SbusRx::Parse() {
 //Initialize rover
 bool Rover::init(){
   //Drivetrain setup
-  
-  //Lift setup  
-  
+  //Lift setup
+  //Leveler setup
+  Serial2.begin(9600);
+  Serial2.setTimeout(100);
   //Disarm rover
-  armed = 0;
+  if(!disarm()){
+    return false;
+  }
   //Begin SBUS communication with receiver
+  Serial1.begin(9600);
   RX.Begin();
-  
+  //Init success
   return true;
 }
 //Disarms all rover systems
@@ -100,6 +104,7 @@ bool Rover::disarm(){
     analogWrite(BL,0);
     analogWrite(FR,0);
     analogWrite(BR,0);
+    return true;
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
 bool Rover::getRxData(){
@@ -110,7 +115,6 @@ bool Rover::getRxData(){
       //success
       return 1;
     }
-    
     //failed
     return 0;
 }
@@ -121,7 +125,7 @@ int Rover::channel(byte dch) const{
     
     return RxData[dch-1];
 }
-//print all channel data
+//Print all channel data to serial monitor
 void Rover::printChannels() const{
     for(int i=1; i<=16; i++){
       Serial.print("CH");
@@ -132,24 +136,24 @@ void Rover::printChannels() const{
     }
     Serial.println("");
 }
-
-//drive control
+//Drive control
 void Rover::drive(){
   if(failsafe() || !armed){
     analogWrite(FL,0);
     analogWrite(BL,0);
     analogWrite(FR,0);
     analogWrite(BR,0);
+    return;
   }
   if(channel(2)>150 && channel(2)<1900 && channel(3)>150 && channel(3)<1900){
-      //forward/backward calculations
+      //forward/backward calculations, map RX values to PWM and get offset from center
       int PWM_FB=int((((float(channel(3))-172)/(1811-172))*(254-122))+122)-188 ;
-      //turning calculations
+      //turning calculations, map RX values to PWM and get offset from center
       int PWM_LR=int(((((float(channel(2))-172))/(1811-172))*(254-122))+122)-188;
       //invert LR if driving backwards
       if(PWM_FB<0)
         PWM_LR = -PWM_LR;
-      //write speed to motors, limit to within acceptable range
+      //write speed to motors, limit to within acceptable PWM range
       byte LeftOutput = constrain(188+PWM_FB+PWM_LR, 122, 254);
       byte RightOutput = constrain(188-PWM_FB+PWM_LR, 122, 254);
       analogWrite(FL,LeftOutput);
@@ -163,5 +167,57 @@ void Rover::drive(){
       analogWrite(FR,0);
       analogWrite(BR,0);
   }
+}
+//Adjust leveler angle from TX input
+void Rover::moveLeveler(){
+  static unsigned long lvlPrevTime = 0; //previous time the function was called
+  unsigned long timeDelay = 500;        //ms to wait to send a message
+  int maxAngleOffset = 30;              //maximum angle of allowable adjustment
+  static float roll = 0;                //roll value adjustment to send to leveler
+  static float pitch = 0;               //pitch value adjustment to send to leveler
 
+  //rover in failsafe or not armed
+  //stop the leveler from moving 
+  if(failsafe() || !armed){
+    Serial2.println("S");
+    return;
+  }
+  //only send a message every timeDelay ms
+  if(millis()-lvlPrevTime>timeDelay){
+    //update timer
+    lvlPrevTime = millis();
+    //get increment adjustment
+    float increment;
+    if(channel(4)>150 && channel(4)<475) increment = -0.5;
+    else if(channel(4)>1500 && channel(4)<1900) increment = 0.5;
+    else increment = 0;
+    //get which axis to increment
+    if(channel(6)==172){  //Return to level selected
+      roll = 0;
+      pitch = 0;
+    }
+    else if(channel(6)==992){ //Pitch adjust selected
+      pitch += increment;
+      pitch = constrain(pitch, -maxAngleOffset, maxAngleOffset);
+    }
+    else if(channel(6)==1811){  //Roll adjust selected
+      roll += increment;
+      roll = constrain(roll, -maxAngleOffset, maxAngleOffset);
+    }
+    else{
+      roll = 0;
+      pitch = 0;
+    }
+    //send message
+    Serial2.print("P");
+    Serial2.println(pitch);
+    Serial2.print("R");
+    Serial2.println(roll);
+
+//    Serial.print("Pitch: ");
+//    Serial.print(pitch);
+//    Serial.print("\tRoll: ");
+//    Serial.println(roll);
+  }
+  return;
 }

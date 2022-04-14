@@ -38,5 +38,7 @@ void loop() {
   }
   if(otto.isArmed()){
       otto.drive();
+      otto.moveLeveler();
   }
+//  otto.printChannels();
 }

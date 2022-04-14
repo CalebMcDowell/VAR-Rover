@@ -34,7 +34,9 @@ Code to level an IMU on top of the tripod
     float levelLimit = 20;
     float pitchTarget = 0;
     float rollTarget = 0;
-    float pitch, roll, bPitch, bRoll;
+    float pAdjust = 0;
+    float rAdjust = 0;
+    float tPitch, tRoll, bPitch, bRoll;
     float angleRange = 0.5;
     int pSpeed, rSpeed;
         
@@ -55,6 +57,7 @@ void getTopIMUAngles(float &, float &);
 void getBotIMUAngles(float &, float &);
 int pitchPID(float);
 int rollPID(float);
+int receiveInfo(float &, float &);
 
 
 void setup() {
@@ -85,63 +88,80 @@ void setup() {
     Wire.setWireTimeout(3000,true);
 
     Serial.begin(9600);
+    Serial1.begin(9600);
+    Serial1.setTimeout(100);
 }
 void loop() {
-      do{
-        getTopIMUAngles(pitch, roll);
-      }while(pitch==0 && roll==0);
-
-      getBotIMUAngles(bPitch, bRoll);
-      if(bPitch > levelLimit){
-        pitchTarget = bPitch-levelLimit;
-      }
-      else if(bPitch < -levelLimit){
-        pitchTarget = bPitch+levelLimit;
-      }
-      else{
-        pitchTarget = 0;
-      }
-      if(bRoll > levelLimit){
-        rollTarget = bRoll-levelLimit;
-      }
-      else if(bRoll < -levelLimit){
-        rollTarget = bRoll+levelLimit;
-      }
-      else{
-        rollTarget = 0;
-      }
-      
-      if(abs(pitch-pitchTarget) > angleRange){
-        pSpeed = pitchPID(pitch);
-        Pitch(pSpeed);
-      }
-      else{
-        Pitch(0);
-      }
-      if(abs(roll-rollTarget) > angleRange){
-        rSpeed = rollPID(roll);
-        Roll(rSpeed);
-      }
-      else{
-        Roll(0);
-      }
-      Serial.print("Pitch:");
-      Serial.print(pitch);
-      Serial.print("\tRoll:");
-      Serial.print(roll);
-      Serial.print("\tbPitch:");
-      Serial.print(bPitch);
-      Serial.print("\tbRoll:");
-      Serial.print(bRoll);
-      Serial.print("\tpSpeed: ");
-      Serial.print(pSpeed);
-      Serial.print("\trSpeed: ");
-      Serial.print(rSpeed);
-      Serial.print("\tpTarget: ");
-      Serial.print(pitchTarget);
-      Serial.print("\trTarget: ");
-      Serial.print(rollTarget);
-      Serial.println();
+  //get command from control system
+    while(receiveInfo(pAdjust, rAdjust) == -1){
+      Roll(0);
+      Pitch(0);
+      delay(5000);
+    }
+  //get top IMU current angles
+    do{
+      getTopIMUAngles(tPitch, tRoll);
+    }while(tPitch==0 && tRoll==0);
+  //factor in adjustment from control system
+    tPitch -= pAdjust;
+    tRoll -= rAdjust;
+  //get bottom IMU current angles, adjust limits
+    getBotIMUAngles(bPitch, bRoll);
+    if(bPitch > levelLimit){
+      pitchTarget = bPitch-levelLimit;
+    }
+    else if(bPitch < -levelLimit){
+      pitchTarget = bPitch+levelLimit;
+    }
+    else{
+      pitchTarget = 0;
+    }
+    if(bRoll > levelLimit){
+      rollTarget = bRoll-levelLimit;
+    }
+    else if(bRoll < -levelLimit){
+      rollTarget = bRoll+levelLimit;
+    }
+    else{
+      rollTarget = 0;
+    }
+  //level to within an acceptable range
+    if(abs(tPitch-pitchTarget) > angleRange){
+      pSpeed = pitchPID(tPitch);
+      Pitch(pSpeed);
+    }
+    else{
+      Pitch(0);
+    }
+    if(abs(tRoll-rollTarget) > angleRange){
+      rSpeed = rollPID(tRoll);
+      Roll(rSpeed);
+    }
+    else{
+      Roll(0);
+    }
+  //print out all info
+    Serial.print("tPitch:");
+    Serial.print(tPitch);
+    Serial.print("\ttRoll:");
+    Serial.print(tRoll);
+    Serial.print("\tbPitch:");
+    Serial.print(bPitch);
+    Serial.print("\tbRoll:");
+    Serial.print(bRoll);
+    Serial.print("\tpAdjust: ");
+    Serial.print(pAdjust);
+    Serial.print("\trAdjust: ");
+    Serial.print(rAdjust);
+//    Serial.print("\tpSpeed: ");
+//    Serial.print(pSpeed);
+//    Serial.print("\trSpeed: ");
+//    Serial.print(rSpeed);
+//    Serial.print("\tpTarget: ");
+//    Serial.print(pitchTarget);
+//    Serial.print("\trTarget: ");
+//    Serial.print(rollTarget);
+    Serial.println();
 }
 
 void move4Lvl(char axis='S', unsigned char pace=0, int angle=0){
@@ -308,4 +328,39 @@ int pitchPID(float curPitch){
 
     float output = (pKP*pErr) + (pKI*pIntErr) + (pKD*((pErr-pErrPrev)/float(curTime-prevTime)));
     return int(constrain(output, -255, 255));
+}
+int receiveInfo(float &pToAdjust, float &rToAdjust){
+    if(Serial1.available()>0){
+      String msg;
+      int axis = Serial1.peek();
+      if(axis == 'S'){  //Stop leveler
+        Pitch(0);
+        Roll(0);
+        Serial1.readStringUntil('\n');
+        return -1;
+      }
+      else if(axis == 'R'){ //adjust Roll
+        Serial1.read();
+        msg = Serial1.readStringUntil('\n');
+        rToAdjust = msg.toFloat();
+      }
+      else if(axis == 'P'){ //adjust Pitch
+        Serial1.read();
+        msg = Serial1.readStringUntil('\n');
+        pToAdjust = msg.toFloat();
+      }
+      else{ //garbage data, ignore it
+        Serial1.readStringUntil('\n');
+      }
+//      Serial.print("\tReceived Roll: ");
+//      Serial.print(pToAdjust);
+//      Serial.print("\tReceived Pitch: ");
+//      Serial.print(rToAdjust);
+//      Serial.print("\tReceived message: ");
+//      Serial.println(msg);
+      return 1;
+    }
+    else{
+      return 0;
+    }
 }

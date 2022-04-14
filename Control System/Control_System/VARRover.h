@@ -2,6 +2,7 @@
 #ifndef VARROVER_H
 #define VARROVER_H
 
+  //Use "Arduino AVR Board" in Boards Manager (v1.8.3)
   #include <ArduinoSTL.h> //Requires "ArduinoSTL" library (v1.3.3)
   #include <cmath>
   #include <array>
@@ -44,7 +45,6 @@
       inline bool ch17() const {return ch17_;}
       inline bool ch18() const {return ch18_;}
   }; //end SbusRx
-
   class Rover{
     private:
       //General
@@ -60,9 +60,7 @@
       //Lift pins
       byte LIFT = 5;
       //Sensor pins
-
       //Relay pins
-      
     public:
       bool init();
       bool isArmed(){return armed;}
@@ -73,6 +71,7 @@
       int channel(byte) const;
       void printChannels() const;
       void drive();
+      void moveLeveler();
   }; //end Rover
 
 #endif  // VARROVER_H
