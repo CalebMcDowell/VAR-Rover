@@ -42,8 +42,8 @@ Code to level an IMU on top of the tripod
         
 //    float pKP = 18, pKI = 0.015, pKD = 300;
 //    float rKP = 18, rKI = 0.015, rKD = 300;
-    float pKP = 18, pKI = 0.015, pKD = 0;
-    float rKP = 18, rKI = 0.015, rKD = 0;
+    float pKP = 18, pKI = 0.035, pKD = 400;
+    float rKP = 18, rKI = 0.035, rKD = 400;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topIMU = Adafruit_BNO055(55, 0x28);
@@ -87,16 +87,16 @@ void setup() {
 //    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
     Wire.setWireTimeout(3000,true);
 
-    Serial.begin(9600);
     Serial1.begin(9600);
     Serial1.setTimeout(100);
+    Serial.begin(9600);
 }
 void loop() {
   //get command from control system
     while(receiveInfo(pAdjust, rAdjust) == -1){
       Roll(0);
       Pitch(0);
-      delay(5000);
+      delay(1000);
     }
   //get top IMU current angles
     do{
@@ -336,7 +336,9 @@ int receiveInfo(float &pToAdjust, float &rToAdjust){
       if(axis == 'S'){  //Stop leveler
         Pitch(0);
         Roll(0);
-        Serial1.readStringUntil('\n');
+        while(Serial1.available())
+          Serial1.readStringUntil('\n');
+        Serial.println("Disarmed");
         return -1;
       }
       else if(axis == 'R'){ //adjust Roll
