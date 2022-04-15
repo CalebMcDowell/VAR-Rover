@@ -25,20 +25,21 @@ void setup() {
 
 void loop() {
   while(!otto.getRxData()){
-      if(otto.failsafe())
+      if(otto.failsafe()){
+        otto.disarm();
         digitalWrite(5,HIGH);
+      }
       else
         digitalWrite(5,LOW);
   }
-  if(otto.channel(5) >= 1800){
-      otto.arm();
-  }
-  else{
-      otto.disarm();
-  }
+  
+  if(otto.channel(5) >= 1800) otto.arm();
+  else  otto.disarm();
+  
   if(otto.isArmed()){
       otto.drive();
+      otto.moveLeveler();
+      otto.lift();
   }
-  otto.moveLeveler();
 //  otto.printChannels();
 }

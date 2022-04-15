@@ -56,9 +56,12 @@
       byte FL = 8;                                   //Front Left
       byte FR = 9;                                   //Front Right
       byte BL = 10;                                  //Back Left
-      byte BR = 11;                                 //Back Right
+      byte BR = 11;                                  //Back Right
       //Lift pins
-      byte LIFT = 5;
+      byte LEn = 2;                                  //Lift Enable
+      byte LExtend = 3;                              //Lift Forward PWM
+      byte LRetract = 4;                             //Lift Retract PWM
+      byte LPos= A14;                                //Lift analog positional feedback
       //Sensor pins
       //Relay pins
     public:
@@ -72,6 +75,7 @@
       void printChannels() const;
       void drive();
       void moveLeveler();
+      void lift();
   }; //end Rover
 
 #endif  // VARROVER_H

@@ -84,6 +84,7 @@ bool SbusRx::Parse() {
 bool Rover::init(){
   //Drivetrain setup
   //Lift setup
+  pinMode(LEn,OUTPUT);
   //Leveler setup
   Serial2.begin(9600);
   Serial2.setTimeout(100);
@@ -100,10 +101,9 @@ bool Rover::init(){
 //Disarms all rover systems
 bool Rover::disarm(){
     armed = 0;
-    analogWrite(FL,0);
-    analogWrite(BL,0);
-    analogWrite(FR,0);
-    analogWrite(BR,0);
+    drive();
+    moveLeveler();
+    lift();
     return true;
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
@@ -213,11 +213,51 @@ void Rover::moveLeveler(){
     Serial2.println(pitch);
     Serial2.print("R");
     Serial2.println(roll);
-
-//    Serial.print("Pitch: ");
-//    Serial.print(pitch);
-//    Serial.print("\tRoll: ");
-//    Serial.println(roll);
   }
   return;
+}
+//Raise and lower lift
+void Rover::lift(){
+    //if failsafe or disarmed disable lift
+    if(failsafe() || !armed){
+      digitalWrite(LEn,LOW);
+      analogWrite(LExtend,0);
+      analogWrite(LRetract,0);
+      return;
+    }
+    
+    byte PWMVal = 255;  //Speed to run lift at
+    int liftMin = 0;   //Minimum position to drive motor to
+    int liftMax = 1023;  //Maximum position to drive motor to
+    int liftPos = analogRead(LPos); //Current position of lift
+    int liftRange = 5;  //Acceptable allowed range of lift analog readings
+    int desiredPos;     //Desired position of lift
+    //map ch1 to lift range
+    if(channel(1)>150 && channel(1)<1900)
+      desiredPos = map(channel(1),172,1811,liftMin,liftMax);
+    else
+      return;
+    //enable lift
+    digitalWrite(LEn,HIGH);
+    //retract
+    if(liftPos > (desiredPos+liftRange)){
+      analogWrite(LExtend,0);
+      Serial.print("Retracting: ");
+      Serial.println(analogRead(LPos));
+      analogWrite(LRetract,PWMVal);
+    }
+    //extend
+    else if(liftPos < (desiredPos-liftRange)){
+      analogWrite(LRetract,0);
+      Serial.print("Extending: ");
+      Serial.println(analogRead(LPos));
+      analogWrite(LExtend,PWMVal);
+    }
+    //within desired range
+    else{
+      analogWrite(LExtend,0);
+      analogWrite(LRetract,0);
+      Serial.print("Reached desired position: ");
+      Serial.println(desiredPos);
+    }
 }
