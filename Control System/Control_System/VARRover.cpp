@@ -88,6 +88,11 @@ bool Rover::init(){
   //Leveler setup
   Serial2.begin(9600);
   Serial2.setTimeout(100);
+  //Drivetrain relay setup
+   pinMode(FLR,Output);
+   pinMode(FRR,Output);
+   pinMode(BLR,Output);
+   pinMode(BRR,Output);
   //Disarm rover
   if(!disarm()){
     return false;
@@ -260,4 +265,24 @@ void Rover::lift(){
       Serial.print("Reached desired position: ");
       Serial.println(desiredPos);
     }
+}
+
+//Motor Relays
+void motorrelays(bool enable){
+      
+      if(enable = 1){
+        digitalWrite(FLR,0);
+        digitalWrite(FRR,0);
+        digitalWrite(BLR,0);
+        digitalWrite(BRR,0);
+      }
+      else{
+        digitalWrite(FLR,1);
+        digitalWrite(FRR,1);
+        digitalWrite(BLR,1);
+        digitalWrite(BRR,1);
+      }
+
+
+
 }

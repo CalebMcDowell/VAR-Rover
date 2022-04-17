@@ -64,6 +64,10 @@
       byte LPos= A14;                                //Lift analog positional feedback
       //Sensor pins
       //Relay pins
+      byte FLR = 28;                                 //Front Left Relay
+      byte FRR = 29;                                 //Front Right Relay
+      byte BLR = 30;                                 //Back Left Relay
+      byte BRR = 31;                                 //Back Right Relay
     public:
       bool init();
       bool isArmed(){return armed;}
