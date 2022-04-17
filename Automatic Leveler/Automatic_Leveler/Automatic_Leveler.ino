@@ -38,10 +38,10 @@ Code to level an IMU on top of the tripod
     float angleRange = 0.5;
     int pSpeed, rSpeed;
         
-    float pKP = 18, pKI = 0.035, pKD = 400;
-    float rKP = 18, rKI = 0.035, rKD = 400;
-//    float pKP = 18, pKI = 0.015, pKD = 0;
-//    float rKP = 18, rKI = 0.015, rKD = 0;
+  //  float pKP = 18, pKI = 0.035, pKD = 400;
+//    float rKP = 18, rKI = 0.035, rKD = 400;
+    float pKP = 18, pKI = 0.015, pKD = 0;
+    float rKP = 18, rKI = 0.015, rKD = 0;
     
 //////IMU Sensors//////
     Adafruit_BNO055 topIMU = Adafruit_BNO055(55, 0x28);
@@ -133,10 +133,10 @@ void loop() {
      // Serial.print(bPitch);
      // Serial.print("\tbRoll:");
      //Serial.print(bRoll);
-      Serial.print("\tpSpeed: ");
-      Serial.print(pSpeed);
-      Serial.print("\trSpeed: ");
-      Serial.print(rSpeed);
+      //Serial.print("\tpSpeed: ");
+      //Serial.print(pSpeed);
+      //Serial.print("\trSpeed: ");
+      //Serial.print(rSpeed);
       Serial.print("\tpTarget: ");
       Serial.print(pitchTarget);
       Serial.print("\trTarget: ");
