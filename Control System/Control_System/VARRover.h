@@ -49,20 +49,25 @@
     private:
       //General
       bool armed;                                   //rover armed
+      float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
+      byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
       //Receiver communication
       SbusRx RX;                                    //Object for receiving
       std::array<int16_t, SbusRx::NUM_CH()> RxData; //Array for storing received data
       //Drivetrain pins
-      byte FL = 8;                                   //Front Left
-      byte FR = 9;                                   //Front Right
-      byte BL = 10;                                  //Back Left
-      byte BR = 11;                                  //Back Right
+      byte FL = 8;                                  //Front Left PWM
+      byte FR = 9;                                  //Front Right PWM
+      byte BL = 10;                                 //Back Left PWM
+      byte BR = 11;                                 //Back Right PWM
       //Lift pins
-      byte LEn = 2;                                  //Lift Enable
-      byte LExtend = 3;                              //Lift Forward PWM
-      byte LRetract = 4;                             //Lift Retract PWM
-      byte LPos= A14;                                //Lift analog positional feedback
+      byte LEn = 2;                                 //Lift Enable
+      byte LExtend = 3;                             //Lift Forward PWM
+      byte LRetract = 4;                            //Lift Retract PWM
+      byte LPos = A14;                              //Lift analog positional feedback
       //Sensor pins
+      byte FBatt = A3;                              //Front battery analog reading
+      byte BBatt = A7;                              //Back battery analog reading
+      byte CBatt = A11;                             //Control system battery analog reading
       //Relay pins
     public:
       bool init();
@@ -73,6 +78,7 @@
       bool getRxData();
       int channel(byte) const;
       void printChannels() const;
+      bool getVoltages();
       void drive();
       void moveLeveler();
       void lift();

@@ -104,6 +104,8 @@ bool Rover::disarm(){
     drive();
     moveLeveler();
     lift();
+
+    Serial.println("DISARMED");
     return true;
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
@@ -120,7 +122,7 @@ bool Rover::getRxData(){
 }
 //Returns desired channel value. channel(3) return ch3
 int Rover::channel(byte dch) const{
-    if(dch<1 || dch>RX.NUM_CH())// || !getRxData())
+    if(dch<1 || dch>RX.NUM_CH())
       return -1;
     
     return RxData[dch-1];
@@ -135,6 +137,39 @@ void Rover::printChannels() const{
       Serial.print(" ");
     }
     Serial.println("");
+}
+//Measure battery voltages
+bool Rover::getVoltages(){
+  int maxAn = 681;   //16.8V (max analog reading)
+  int minAn = 536;   //13.2V (min analog reading)
+
+  //read sensors
+  int FrontAn = analogRead(FBatt);
+  int BackAn = analogRead(BBatt);
+  int ControlAn = analogRead(CBatt);
+  
+  //equation based on y = 40.463x+0.9332, derived from voltage sensor testing
+  FBatV = (float(FrontAn)-0.9332)/40.463;
+  BBatV = (float(BackAn)-0.9332)/40.463;
+  CBatV = (float(ControlAn)-0.9332)/40.463;
+  
+  //map analog values to percentage charge
+  byte FBatAmt = map(constrain(FrontAn,minAn,maxAn),minAn,maxAn,0,100);
+  byte BBatAmt = map(constrain(BackAn,minAn,maxAn),minAn,maxAn,0,100);
+  byte CBatAmt = map(constrain(ControlAn,minAn,maxAn),minAn,maxAn,0,100);
+
+//  Serial.print("FV: ");
+//  Serial.print(FBatV);
+//  Serial.print("\tF%: ");
+//  Serial.println(FBatAmt);
+
+  //check for low voltage
+  if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
+    Serial.println("Low Battery!!");
+    return false;
+  }
+
+  return true;    
 }
 //Drive control
 void Rover::drive(){
@@ -242,22 +277,16 @@ void Rover::lift(){
     //retract
     if(liftPos > (desiredPos+liftRange)){
       analogWrite(LExtend,0);
-      Serial.print("Retracting: ");
-      Serial.println(analogRead(LPos));
       analogWrite(LRetract,PWMVal);
     }
     //extend
     else if(liftPos < (desiredPos-liftRange)){
       analogWrite(LRetract,0);
-      Serial.print("Extending: ");
-      Serial.println(analogRead(LPos));
       analogWrite(LExtend,PWMVal);
     }
     //within desired range
     else{
       analogWrite(LExtend,0);
       analogWrite(LRetract,0);
-      Serial.print("Reached desired position: ");
-      Serial.println(desiredPos);
     }
 }

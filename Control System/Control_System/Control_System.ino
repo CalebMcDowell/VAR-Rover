@@ -18,19 +18,18 @@ Rover otto;
 
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
-  pinMode(5,OUTPUT);
   Serial.begin(9600);
   otto.init();
 }
 
 void loop() {
-  while(!otto.getRxData()){
+  while(!otto.getRxData() || !otto.getVoltages()){
       if(otto.failsafe()){
         otto.disarm();
-        digitalWrite(5,HIGH);
       }
-      else
-        digitalWrite(5,LOW);
+      else{
+        
+      }
   }
   
   if(otto.channel(5) >= 1800) otto.arm();
