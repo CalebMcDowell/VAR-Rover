@@ -179,30 +179,46 @@ bool Rover::getVoltages(){
 }
 //Display splash screen
 void Rover::dispSplash() const{
-    lcd->clear();
     lcd->setCursor(0,1);
-    lcd->print("      VAR  Rover    ");
+    lcd->print("     VAR  Rover     ");
     lcd->print("(: Happy Scanning :)");
 }
 //Display screen according to operator input, only every timeDelay
 void Rover::displayLCD() const{
     static unsigned long lvlPrevTime = 0; //previous time the function was called
     static unsigned long timeDelay = 500; //ms to wait before updating LCD
+    static byte curDisp = 0;              //indicates which display currently selected
     
     //only update LCD every timeDelay ms
     if(millis()-lvlPrevTime<timeDelay)
       return;
-    
     //update timer
     lvlPrevTime = millis();
-    if(channel(7)==172)       dispScr1();
-    else if(channel(7)==992)  dispScr2();
-    else if(channel(7)==1811) dispScr3();
-    else                      dispScr1();
+    //display desired screen
+    if(channel(7)==172){
+      if(1 != curDisp) lcd->clear();
+      curDisp = 1;
+      dispScr1();
+    }
+    else if(channel(7)==992){
+      if(2 != curDisp) lcd->clear();
+      curDisp = 2;
+      dispScr2();
+    }
+    else if(channel(7)==1811){
+      if(3 != curDisp) lcd->clear();
+      curDisp = 3;
+      dispScr3();
+    }
+    else{
+      if(4 != curDisp) lcd->clear();
+      curDisp = 4;
+      dispScr1();
+    }
 }
 //Display battery voltages/percentages, uptime, and current status to LCD
 void Rover::dispScr1() const{
-    lcd->clear();
+//    lcd->clear();
     //display battery info
     lcd->setCursor(0,0);  
     lcd->print("Front: ");
@@ -211,13 +227,13 @@ void Rover::dispScr1() const{
     lcd->print(FBatAmt);
     lcd->print("%)");
     lcd->setCursor(0,1);
-    lcd->print("B-");
+    lcd->print("Back:  ");
     lcd->print(BBatV);
     lcd->print("V (");
     lcd->print(BBatAmt);
     lcd->print("%)");
     lcd->setCursor(0,2);
-    lcd->print("C-");
+    lcd->print("Ctrl:  ");
     lcd->print(CBatV);
     lcd->print("V (");
     lcd->print(CBatAmt);
@@ -230,8 +246,6 @@ void Rover::dispScr1() const{
     unsigned long hours = minutes/60;
     seconds %= 60;
     minutes %= 60;
-    if(hours<10)
-      lcd->print(" ");
     lcd->print(hours);
     lcd->print("h");
     if(minutes<10)
@@ -257,7 +271,7 @@ void Rover::dispScr1() const{
 }
 //Display pitch/roll info and lift height to LCD
 void Rover::dispScr2() const{
-    lcd->clear();
+//    lcd->clear();
     lcd->setCursor(0,0);
     lcd->print("Screen 2");
 }
@@ -267,7 +281,7 @@ void Rover::dispScr3() const{
 }
 //Display error messages and warnings to LCD
 void Rover::dispError() const{
-    lcd->clear();
+//    lcd->clear();
     lcd->setCursor(0,0);
     
     if(roverError){

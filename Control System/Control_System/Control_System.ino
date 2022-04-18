@@ -12,9 +12,7 @@
 */
 
 #include "VARRover.h"
-
 Rover otto;
-
 
 void setup() {
   pinMode(LED_BUILTIN,OUTPUT);
@@ -23,25 +21,26 @@ void setup() {
 }
 
 void loop() {
-  while(!otto.getRxData() || !otto.getVoltages()){
+  //check for valid receiver data & acceptable battery voltages
+  while(!otto.getRxData()){// || otto.getVoltages()){
       if(otto.failsafe()){
         otto.disarm();
+        otto.dispError();
       }
       else{
         
       }
-      otto.dispError();
   }
-  
+  //determine arm/disarm state
   if(otto.channel(5) >= 1800) otto.arm();
   else  otto.disarm();
-  
+  //if armed, rover movement allowed
   if(otto.isArmed()){
       otto.drive();
       otto.moveLeveler();
       otto.lift();
   }
-
+  //update LCD screen (only every timeDelay)
   otto.displayLCD();
   
 //  otto.printChannels();

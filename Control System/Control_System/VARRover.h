@@ -50,7 +50,7 @@
   class Rover{
     private:
       /*  General */
-      bool armed;                                   //Rover armed/disarmed
+      bool armed;                                   //Rover armed/disarmed2
       bool roverError;                              //Indicate if the rover has an error or not
       float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
       byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
