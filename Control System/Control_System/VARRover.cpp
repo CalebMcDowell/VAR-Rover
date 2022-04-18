@@ -82,30 +82,36 @@ bool SbusRx::Parse() {
 ///////////////ROVER CLASS METHODS//////////////
 //Initialize rover
 bool Rover::init(){
-  //Drivetrain setup
-  //Lift setup
-  pinMode(LEn,OUTPUT);
-  //Leveler setup
-  Serial2.begin(9600);
-  Serial2.setTimeout(100);
-  //Drivetrain relay setup
-   pinMode(FLR,Output);
-   pinMode(FRR,Output);
-   pinMode(BLR,Output);
-   pinMode(BRR,Output);
-  //Disarm rover
-  if(!disarm()){
-    return false;
-  }
-  //Begin SBUS communication with receiver
-  Serial1.begin(9600);
-  RX.Begin();
-  //Init success
-  return true;
+    //Drivetrain setup
+    //Drivetrain relay setup
+    pinMode(FLR,OUTPUT);
+    pinMode(FRR,OUTPUT);
+    pinMode(BLR,OUTPUT);
+    pinMode(BRR,OUTPUT);
+    //Lift setup
+    pinMode(LEn,OUTPUT);
+    //Leveler setup
+    Serial2.begin(9600);
+    Serial2.setTimeout(100);
+    //Disarm rover
+    if(!disarm()){
+      return false;
+    }
+    //Begin SBUS communication with receiver
+    Serial1.begin(9600);
+    RX.Begin();
+    //Init success
+    return true;
+}
+//Arms the rover which allows subsystems to run
+void Rover::arm(){
+    armed = 1;
+    motorRelays(1); //enable motor relays
 }
 //Disarms all rover systems
 bool Rover::disarm(){
     armed = 0;
+    motorRelays(0); //disable motor relays
     drive();
     moveLeveler();
     lift();
@@ -141,36 +147,43 @@ void Rover::printChannels() const{
     }
     Serial.println("");
 }
+//Enable/disable motors
+void Rover::motorRelays(bool enable){
+    digitalWrite(FLR,enable);
+    digitalWrite(FRR,enable);
+    digitalWrite(BLR,enable);
+    digitalWrite(BRR,enable);
+}
 //Drive control
 void Rover::drive(){
   if(failsafe() || !armed){
-    analogWrite(FL,0);
-    analogWrite(BL,0);
-    analogWrite(FR,0);
-    analogWrite(BR,0);
+    analogWrite(FL,188);
+    analogWrite(BL,188);
+    analogWrite(FR,188);
+    analogWrite(BR,188);
     return;
   }
   if(channel(2)>150 && channel(2)<1900 && channel(3)>150 && channel(3)<1900){
-      //forward/backward calculations, map RX values to PWM and get offset from center
-      int PWM_FB=int((((float(channel(3))-172)/(1811-172))*(254-122))+122)-188 ;
-      //turning calculations, map RX values to PWM and get offset from center
-      int PWM_LR=int(((((float(channel(2))-172))/(1811-172))*(254-122))+122)-188;
-      //invert LR if driving backwards
-      if(PWM_FB<0)
-        PWM_LR = -PWM_LR;
-      //write speed to motors, limit to within acceptable PWM range
-      byte LeftOutput = constrain(188+PWM_FB+PWM_LR, 122, 254);
-      byte RightOutput = constrain(188-PWM_FB+PWM_LR, 122, 254);
-      analogWrite(FL,LeftOutput);
-      analogWrite(BL,LeftOutput);
-      analogWrite(FR,RightOutput);
-      analogWrite(BR,RightOutput);
+    //forward/backward calculations, map RX values to PWM and get offset from center
+    int PWM_FB=int((((float(channel(3))-172)/(1811-172))*(254-122))+122)-188 ;
+    //turning calculations, map RX values to PWM and get offset from center
+    int PWM_LR=int(((((float(channel(2))-172))/(1811-172))*(254-122))+122)-188;
+    //invert LR if driving backwards
+    if(PWM_FB<0)
+      PWM_LR = -PWM_LR;
+    //write speed to motors, limit to within acceptable PWM range
+    byte LeftOutput = constrain(188+PWM_FB+PWM_LR, 122, 254);
+    byte RightOutput = constrain(188-PWM_FB+PWM_LR, 122, 254);
+    analogWrite(FL,LeftOutput);
+    analogWrite(BL,LeftOutput);
+    analogWrite(FR,RightOutput);
+    analogWrite(BR,RightOutput);
   }
   else{
-      analogWrite(FL,0);
-      analogWrite(BL,0);
-      analogWrite(FR,0);
-      analogWrite(BR,0);
+    analogWrite(FL,188);
+    analogWrite(BL,188);
+    analogWrite(FR,188);
+    analogWrite(BR,188);
   }
 }
 //Adjust leveler angle from TX input
@@ -265,24 +278,4 @@ void Rover::lift(){
       Serial.print("Reached desired position: ");
       Serial.println(desiredPos);
     }
-}
-
-//Motor Relays
-void motorrelays(bool enable){
-      
-      if(enable = 1){
-        digitalWrite(FLR,0);
-        digitalWrite(FRR,0);
-        digitalWrite(BLR,0);
-        digitalWrite(BRR,0);
-      }
-      else{
-        digitalWrite(FLR,1);
-        digitalWrite(FRR,1);
-        digitalWrite(BLR,1);
-        digitalWrite(BRR,1);
-      }
-
-
-
 }

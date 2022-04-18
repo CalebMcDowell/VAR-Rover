@@ -3,7 +3,7 @@
 #define VARROVER_H
 
   //Use "Arduino AVR Board" in Boards Manager (v1.8.3)
-  #include <ArduinoSTL.h> //Requires "ArduinoSTL" library (v1.3.3)
+  #include <ArduinoSTL.h>         //Requires "ArduinoSTL" library (v1.3.3)
   #include <cmath>
   #include <array>
  
@@ -57,26 +57,27 @@
       byte FR = 9;                                   //Front Right
       byte BL = 10;                                  //Back Left
       byte BR = 11;                                  //Back Right
+      //Drivetrain relay pins
+      byte FLR = 28;                                 //Front Left Relay
+      byte FRR = 29;                                 //Front Right Relay
+      byte BLR = 30;                                 //Back Left Relay
+      byte BRR = 31;                                 //Back Right Relay
       //Lift pins
       byte LEn = 2;                                  //Lift Enable
       byte LExtend = 3;                              //Lift Forward PWM
       byte LRetract = 4;                             //Lift Retract PWM
       byte LPos= A14;                                //Lift analog positional feedback
       //Sensor pins
-      //Relay pins
-      byte FLR = 28;                                 //Front Left Relay
-      byte FRR = 29;                                 //Front Right Relay
-      byte BLR = 30;                                 //Back Left Relay
-      byte BRR = 31;                                 //Back Right Relay
     public:
       bool init();
       bool isArmed(){return armed;}
-      bool arm(){armed = 1;}
+      void arm();
       bool disarm();
       bool failsafe(){return RX.failsafe();};
       bool getRxData();
-      int channel(byte) const;
+      int  channel(byte) const;
       void printChannels() const;
+      void motorRelays(bool);
       void drive();
       void moveLeveler();
       void lift();
