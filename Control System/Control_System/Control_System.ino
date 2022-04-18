@@ -30,6 +30,7 @@ void loop() {
       else{
         
       }
+      otto.dispError();
   }
   
   if(otto.channel(5) >= 1800) otto.arm();
@@ -40,5 +41,8 @@ void loop() {
       otto.moveLeveler();
       otto.lift();
   }
+
+  otto.displayLCD();
+  
 //  otto.printChannels();
 }

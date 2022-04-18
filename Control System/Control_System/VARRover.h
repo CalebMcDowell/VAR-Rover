@@ -3,9 +3,11 @@
 #define VARROVER_H
 
   //Use "Arduino AVR Board" in Boards Manager (v1.8.3)
-  #include <ArduinoSTL.h> //Requires "ArduinoSTL" library (v1.3.3)
+  #include <ArduinoSTL.h>         //Requires "ArduinoSTL" library (v1.3.3)
   #include <cmath>
   #include <array>
+  #include <Wire.h>
+  #include <LiquidCrystal_I2C.h>  //Requires "LiquidCrystal I2C" library (v1.1.2)
  
   //This class is a modified version of the one found in
   //the "Bolder Flight Systems SBUS" library (v7.0.0)
@@ -47,38 +49,52 @@
   }; //end SbusRx
   class Rover{
     private:
-      //General
-      bool armed;                                   //rover armed
+      /*  General */
+      bool armed;                                   //Rover armed/disarmed
+      bool roverError;                              //Indicate if the rover has an error or not
       float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
       byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
-      //Receiver communication
+      float rovPitch, rovRoll;                      //Pitch and roll values for rover
+      /*  Receiver Communication  */
       SbusRx RX;                                    //Object for receiving
       std::array<int16_t, SbusRx::NUM_CH()> RxData; //Array for storing received data
-      //Drivetrain pins
+      /*  LCD Display */
+      LiquidCrystal_I2C* lcd;                       //LCD screen pointer, 20chars X 4rows
+      /*  Drivetrain  */
       byte FL = 8;                                  //Front Left PWM
       byte FR = 9;                                  //Front Right PWM
       byte BL = 10;                                 //Back Left PWM
       byte BR = 11;                                 //Back Right PWM
-      //Lift pins
+      /*  Lift  */
       byte LEn = 2;                                 //Lift Enable
       byte LExtend = 3;                             //Lift Forward PWM
       byte LRetract = 4;                            //Lift Retract PWM
       byte LPos = A14;                              //Lift analog positional feedback
-      //Sensor pins
+      /*  Sensor  */
       byte FBatt = A3;                              //Front battery analog reading
       byte BBatt = A7;                              //Back battery analog reading
       byte CBatt = A11;                             //Control system battery analog reading
-      //Relay pins
+      /*  Relays */
     public:
+      /*  General Rover */
       bool init();
       bool isArmed(){return armed;}
       bool arm(){armed = 1;}
       bool disarm();
+      /*  Receiver & Channels */
       bool failsafe(){return RX.failsafe();};
       bool getRxData();
       int channel(byte) const;
       void printChannels() const;
+      /*  Safety and Display  */
       bool getVoltages();
+      void dispSplash() const;
+      void displayLCD() const;
+      void dispScr1() const;
+      void dispScr2() const;
+      void dispScr3() const;
+      void dispError() const;
+      /*  Move Stuff  */
       void drive();
       void moveLeveler();
       void lift();

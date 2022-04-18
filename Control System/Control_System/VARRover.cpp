@@ -82,6 +82,12 @@ bool SbusRx::Parse() {
 ///////////////ROVER CLASS METHODS//////////////
 //Initialize rover
 bool Rover::init(){
+  //Start LCD display
+  lcd = new LiquidCrystal_I2C(0x27,20,4); //LCD address to 0x27,20chars X 4lines
+  lcd->init();
+  lcd->backlight();
+  dispSplash();
+  delay(5000);
   //Drivetrain setup
   //Lift setup
   pinMode(LEn,OUTPUT);
@@ -140,36 +146,148 @@ void Rover::printChannels() const{
 }
 //Measure battery voltages
 bool Rover::getVoltages(){
-  int maxAn = 681;   //16.8V (max analog reading)
-  int minAn = 536;   //13.2V (min analog reading)
-
-  //read sensors
-  int FrontAn = analogRead(FBatt);
-  int BackAn = analogRead(BBatt);
-  int ControlAn = analogRead(CBatt);
+    int maxAn = 681;   //16.8V (max analog reading)
+    int minAn = 536;   //13.2V (min analog reading)
   
-  //equation based on y = 40.463x+0.9332, derived from voltage sensor testing
-  FBatV = (float(FrontAn)-0.9332)/40.463;
-  BBatV = (float(BackAn)-0.9332)/40.463;
-  CBatV = (float(ControlAn)-0.9332)/40.463;
+    //read sensors
+    int FrontAn = analogRead(FBatt);
+    int BackAn = analogRead(BBatt);
+    int ControlAn = analogRead(CBatt);
+    
+    //equation based on y = 40.463x+0.9332, derived from voltage sensor testing
+    FBatV = (float(FrontAn)-0.9332)/40.463;
+    BBatV = (float(BackAn)-0.9332)/40.463;
+    CBatV = (float(ControlAn)-0.9332)/40.463;
+    
+    //map analog values to percentage charge
+    byte FBatAmt = map(constrain(FrontAn,minAn,maxAn),minAn,maxAn,0,100);
+    byte BBatAmt = map(constrain(BackAn,minAn,maxAn),minAn,maxAn,0,100);
+    byte CBatAmt = map(constrain(ControlAn,minAn,maxAn),minAn,maxAn,0,100);
   
-  //map analog values to percentage charge
-  byte FBatAmt = map(constrain(FrontAn,minAn,maxAn),minAn,maxAn,0,100);
-  byte BBatAmt = map(constrain(BackAn,minAn,maxAn),minAn,maxAn,0,100);
-  byte CBatAmt = map(constrain(ControlAn,minAn,maxAn),minAn,maxAn,0,100);
+  //  Serial.print("FV: ");
+  //  Serial.print(FBatV);
+  //  Serial.print("\tF%: ");
+  //  Serial.println(FBatAmt);
+  
+    //check for low voltage
+    if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
+      Serial.println("Low Battery!!");
+      return false;
+    }
+  
+    return true;    
+}
+//Display splash screen
+void Rover::dispSplash() const{
+    lcd->clear();
+    lcd->setCursor(0,1);
+    lcd->print("      VAR  Rover    ");
+    lcd->print("(: Happy Scanning :)");
+}
+//Display screen according to operator input, only every timeDelay
+void Rover::displayLCD() const{
+    static unsigned long lvlPrevTime = 0; //previous time the function was called
+    static unsigned long timeDelay = 500; //ms to wait before updating LCD
+    
+    //only update LCD every timeDelay ms
+    if(millis()-lvlPrevTime<timeDelay)
+      return;
+    
+    //update timer
+    lvlPrevTime = millis();
+    if(channel(7)==172)       dispScr1();
+    else if(channel(7)==992)  dispScr2();
+    else if(channel(7)==1811) dispScr3();
+    else                      dispScr1();
+}
+//Display battery voltages/percentages, uptime, and current status to LCD
+void Rover::dispScr1() const{
+    lcd->clear();
+    //display battery info
+    lcd->setCursor(0,0);  
+    lcd->print("Front: ");
+    lcd->print(FBatV);
+    lcd->print("V (");
+    lcd->print(FBatAmt);
+    lcd->print("%)");
+    lcd->setCursor(0,1);
+    lcd->print("B-");
+    lcd->print(BBatV);
+    lcd->print("V (");
+    lcd->print(BBatAmt);
+    lcd->print("%)");
+    lcd->setCursor(0,2);
+    lcd->print("C-");
+    lcd->print(CBatV);
+    lcd->print("V (");
+    lcd->print(CBatAmt);
+    lcd->print("%)");
+    
+    //calculate and display uptime info
+    lcd->setCursor(0,3);
+    unsigned long seconds = (millis()/1000);
+    unsigned long minutes = seconds/60;
+    unsigned long hours = minutes/60;
+    seconds %= 60;
+    minutes %= 60;
+    if(hours<10)
+      lcd->print(" ");
+    lcd->print(hours);
+    lcd->print("h");
+    if(minutes<10)
+      lcd->print(0);
+    lcd->print(minutes);
+    lcd->print("m");
+    if(seconds<10)
+      lcd->print(0);
+    lcd->print(seconds);
+    lcd->print("s");
 
-//  Serial.print("FV: ");
-//  Serial.print(FBatV);
-//  Serial.print("\tF%: ");
-//  Serial.println(FBatAmt);
+    //display current status of the rover
+    lcd->setCursor(12,3);
+    if(failsafe()){
+      lcd->print("FAILSAFE");
+    }
+    else if(isArmed()){
+      lcd->print("   Armed");
+    }
+    else{
+      lcd->print("Disarmed");
+    }
+}
+//Display pitch/roll info and lift height to LCD
+void Rover::dispScr2() const{
+    lcd->clear();
+    lcd->setCursor(0,0);
+    lcd->print("Screen 2");
+}
+//Display screen 3 info, currently error screen, to LCD
+void Rover::dispScr3() const{
+    dispError();
+}
+//Display error messages and warnings to LCD
+void Rover::dispError() const{
+    lcd->clear();
+    lcd->setCursor(0,0);
+    
+    if(roverError){
+      lcd->print("ERROR");
+    }
+    else{
+      lcd->print("No errors :)");
+    }
 
-  //check for low voltage
-  if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
-    Serial.println("Low Battery!!");
-    return false;
-  }
-
-  return true;    
+    //display current status of the rover
+    lcd->setCursor(12,3);
+    if(failsafe()){
+      lcd->print("FAILSAFE");
+    }
+    else if(isArmed()){
+      lcd->print("   Armed");
+    }
+    else{
+      lcd->print("Disarmed");
+    }
 }
 //Drive control
 void Rover::drive(){
