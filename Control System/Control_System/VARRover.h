@@ -6,6 +6,8 @@
   #include <ArduinoSTL.h>         //Requires "ArduinoSTL" library (v1.3.3)
   #include <cmath>
   #include <array>
+  #include <Wire.h>
+  #include <LiquidCrystal_I2C.h>  //Requires "LiquidCrystal I2C" library (v1.1.2)
  
   //This class is a modified version of the one found in
   //the "Bolder Flight Systems SBUS" library (v7.0.0)
@@ -47,37 +49,57 @@
   }; //end SbusRx
   class Rover{
     private:
-      //General
-      bool armed;                                   //rover armed
-      //Receiver communication
+      /*  General */
+      bool armed;                                   //Rover armed/disarmed2
+      bool roverError;                              //Indicate if the rover has an error or not
+      float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
+      byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
+      float rovPitch, rovRoll;                      //Pitch and roll values for rover
+      /*  Receiver Communication  */
       SbusRx RX;                                    //Object for receiving
       std::array<int16_t, SbusRx::NUM_CH()> RxData; //Array for storing received data
-      //Drivetrain pins
-      byte FL = 8;                                   //Front Left
-      byte FR = 9;                                   //Front Right
-      byte BL = 10;                                  //Back Left
-      byte BR = 11;                                  //Back Right
-      //Drivetrain relay pins
+      /*  LCD Display */
+      LiquidCrystal_I2C* lcd;                       //LCD screen pointer, 20chars X 4rows
+      /*  Drivetrain  */
+      byte FL = 8;                                  //Front Left PWM
+      byte FR = 9;                                  //Front Right PWM
+      byte BL = 10;                                 //Back Left PWM
+      byte BR = 11;                                 //Back Right PWM
+      /*  Relays */
       byte FLR = 28;                                 //Front Left Relay
       byte FRR = 29;                                 //Front Right Relay
       byte BLR = 30;                                 //Back Left Relay
       byte BRR = 31;                                 //Back Right Relay
-      //Lift pins
-      byte LEn = 2;                                  //Lift Enable
-      byte LExtend = 3;                              //Lift Forward PWM
-      byte LRetract = 4;                             //Lift Retract PWM
-      byte LPos= A14;                                //Lift analog positional feedback
-      //Sensor pins
+      /*  Lift  */
+      byte LEn = 2;                                 //Lift Enable
+      byte LExtend = 3;                             //Lift Forward PWM
+      byte LRetract = 4;                            //Lift Retract PWM
+      byte LPos = A14;                              //Lift analog positional feedback
+      /*  Sensors */
+      byte FBatt = A3;                              //Front battery analog reading
+      byte BBatt = A7;                              //Back battery analog reading
+      byte CBatt = A11;                             //Control system battery analog reading      
     public:
+      /*  General Rover */
       bool init();
       bool isArmed(){return armed;}
-      void arm();
+      bool arm();
       bool disarm();
+      /*  Receiver & Channels */
       bool failsafe(){return RX.failsafe();};
       bool getRxData();
-      int  channel(byte) const;
+      int channel(byte) const;
       void printChannels() const;
+      /*  Safety and Display  */
+      bool getVoltages();
       void motorRelays(bool);
+      void dispSplash() const;
+      void displayLCD() const;
+      void dispScr1() const;
+      void dispScr2() const;
+      void dispScr3() const;
+      void dispError() const;
+      /*  Move Stuff  */
       void drive();
       void moveLeveler();
       void lift();

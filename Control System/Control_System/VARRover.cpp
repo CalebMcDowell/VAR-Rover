@@ -82,6 +82,13 @@ bool SbusRx::Parse() {
 ///////////////ROVER CLASS METHODS//////////////
 //Initialize rover
 bool Rover::init(){
+    //Start LCD display
+    lcd = new LiquidCrystal_I2C(0x27,20,4); //LCD address to 0x27,20chars X 4lines
+    lcd->init();
+    lcd->backlight();
+    dispSplash();
+    delay(5000);
+    lcd->clear();
     //Drivetrain setup
     //Drivetrain relay setup
     pinMode(FLR,OUTPUT);
@@ -104,7 +111,7 @@ bool Rover::init(){
     return true;
 }
 //Arms the rover which allows subsystems to run
-void Rover::arm(){
+bool Rover::arm(){
     armed = 1;
     motorRelays(1); //enable motor relays
 }
@@ -115,6 +122,8 @@ bool Rover::disarm(){
     drive();
     moveLeveler();
     lift();
+
+    Serial.println("DISARMED");
     return true;
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
@@ -146,6 +155,172 @@ void Rover::printChannels() const{
       Serial.print(" ");
     }
     Serial.println("");
+}
+//Measure battery voltages
+bool Rover::getVoltages(){
+    int maxAn = 681;   //16.8V (max analog reading)
+    int minAn = 536;   //13.2V (min analog reading)
+  
+    //read sensors
+    int FrontAn = analogRead(FBatt);
+    int BackAn = analogRead(BBatt);
+    int ControlAn = analogRead(CBatt);
+    
+    //equation based on y = 40.463x+0.9332, derived from voltage sensor testing
+    FBatV = (float(FrontAn)-0.9332)/40.463;
+    BBatV = (float(BackAn)-0.9332)/40.463;
+    CBatV = (float(ControlAn)-0.9332)/40.463;
+    
+    //map analog values to percentage charge
+    FBatAmt = map(constrain(FrontAn,minAn,maxAn),minAn,maxAn,0,100);
+    BBatAmt = map(constrain(BackAn,minAn,maxAn),minAn,maxAn,0,100);
+    CBatAmt = map(constrain(ControlAn,minAn,maxAn),minAn,maxAn,0,100);
+  
+  //  Serial.print("FV: ");
+  //  Serial.print(FBatV);
+  //  Serial.print("\tF%: ");
+  //  Serial.println(FBatAmt);
+  
+    //check for low voltage
+    if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
+      Serial.println("Low Battery!!");
+      return false;
+    }
+    return true;    
+}
+//Display splash screen
+void Rover::dispSplash() const{
+    lcd->setCursor(0,1);
+    lcd->print("     VAR  Rover     ");
+    lcd->print("(: Happy Scanning :)");
+}
+//Display screen according to operator input, only every timeDelay
+void Rover::displayLCD() const{
+    static unsigned long lvlPrevTime = 0; //previous time the function was called
+    static unsigned long timeDelay = 500; //ms to wait before updating LCD
+    static byte curDisp = 0;              //indicates which display currently selected
+    
+    //only update LCD every timeDelay ms
+    if(millis()-lvlPrevTime<timeDelay)
+      return;
+    //update timer
+    lvlPrevTime = millis();
+    //display desired screen
+    if(channel(7)==172){
+      if(1 != curDisp) lcd->clear();
+      curDisp = 1;
+      dispScr1();
+    }
+    else if(channel(7)==992){
+      if(2 != curDisp) lcd->clear();
+      curDisp = 2;
+      dispScr2();
+    }
+    else if(channel(7)==1811){
+      if(3 != curDisp) lcd->clear();
+      curDisp = 3;
+      dispScr3();
+    }
+    else{
+      if(4 != curDisp) lcd->clear();
+      curDisp = 4;
+      dispScr1();
+    }
+}
+//Display battery voltages/percentages, uptime, and current status to LCD
+void Rover::dispScr1() const{
+//    lcd->clear();
+    //display battery info
+    lcd->setCursor(0,0);  
+    lcd->print("Front: ");
+    lcd->print(FBatV);
+    lcd->print("V (");
+    lcd->print(FBatAmt);
+    lcd->print("%)");
+    lcd->setCursor(0,1);
+    lcd->print("Back:  ");
+    lcd->print(BBatV);
+    lcd->print("V (");
+    lcd->print(BBatAmt);
+    lcd->print("%)");
+    lcd->setCursor(0,2);
+    lcd->print("Ctrl:  ");
+    lcd->print(CBatV);
+    lcd->print("V (");
+    lcd->print(CBatAmt);
+    lcd->print("%)");
+    
+    //calculate and display uptime info
+    lcd->setCursor(0,3);
+    unsigned long seconds = (millis()/1000);
+    unsigned long minutes = seconds/60;
+    unsigned long hours = minutes/60;
+    seconds %= 60;
+    minutes %= 60;
+    lcd->print(hours);
+    lcd->print("h");
+    if(minutes<10)
+      lcd->print(0);
+    lcd->print(minutes);
+    lcd->print("m");
+    if(seconds<10)
+      lcd->print(0);
+    lcd->print(seconds);
+    lcd->print("s");
+
+    //display current status of the rover
+    lcd->setCursor(12,3);
+    if(failsafe()){
+      lcd->print("FAILSAFE");
+    }
+    else if(isArmed()){
+      lcd->print("   Armed");
+    }
+    else{
+      lcd->print("Disarmed");
+    }
+}
+//Display pitch/roll info and lift height to LCD
+void Rover::dispScr2() const{
+//    lcd->clear();
+    lcd->setCursor(0,0);
+    lcd->print("Screen 2");
+}
+//Display screen 3 info, currently error screen, to LCD
+void Rover::dispScr3() const{
+    dispError();
+}
+//Display error messages and warnings to LCD
+void Rover::dispError() const{
+    static unsigned long lvlPrevTime = 0; //previous time the function was called
+    static unsigned long timeDelay = 500; //ms to wait before updating LCD
+    
+    //only clear LCD every timeDelay ms
+    if(millis()-lvlPrevTime>timeDelay){
+      lcd->clear();
+      lvlPrevTime = millis();
+    }
+
+    //display error
+    lcd->setCursor(0,0);
+    if(roverError){
+      lcd->print("ERROR");
+    }
+    else{
+      lcd->print("No errors :)");
+    }
+
+    //display current status of the rover
+    lcd->setCursor(12,3);
+    if(failsafe()){
+      lcd->print("FAILSAFE");
+    }
+    else if(isArmed()){
+      lcd->print("   Armed");
+    }
+    else{
+      lcd->print("Disarmed");
+    }
 }
 //Enable/disable motors
 void Rover::motorRelays(bool enable){
@@ -260,22 +435,16 @@ void Rover::lift(){
     //retract
     if(liftPos > (desiredPos+liftRange)){
       analogWrite(LExtend,0);
-      Serial.print("Retracting: ");
-      Serial.println(analogRead(LPos));
       analogWrite(LRetract,PWMVal);
     }
     //extend
     else if(liftPos < (desiredPos-liftRange)){
       analogWrite(LRetract,0);
-      Serial.print("Extending: ");
-      Serial.println(analogRead(LPos));
       analogWrite(LExtend,PWMVal);
     }
     //within desired range
     else{
       analogWrite(LExtend,0);
       analogWrite(LRetract,0);
-      Serial.print("Reached desired position: ");
-      Serial.println(desiredPos);
     }
 }

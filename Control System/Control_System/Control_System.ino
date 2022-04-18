@@ -22,7 +22,7 @@ void setup() {
 
 void loop() {
   //check for valid receiver data & acceptable battery voltages
-  while(!otto.getRxData()){// || otto.getVoltages()){
+  while(!otto.getRxData() || !otto.getVoltages()){
       if(otto.failsafe()){
         otto.disarm();
         otto.dispError();
