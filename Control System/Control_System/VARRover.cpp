@@ -100,6 +100,10 @@ bool Rover::init(){
     //Leveler setup
     Serial2.begin(9600);
     Serial2.setTimeout(100);
+    //Safety IMU setup
+    safetyIMU = new MPU6050(Wire);
+    safetyIMU->Initialize();
+    Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
     //Disarm rover
     if(!disarm()){
       return false;
@@ -119,24 +123,33 @@ bool Rover::arm(){
 bool Rover::disarm(){
     armed = 0;
     motorRelays(0); //disable motor relays
-    drive();
-    moveLeveler();
-    lift();
+    drive(0);
+    moveLeveler(0);
+    lift(0);
 
     Serial.println("DISARMED");
     return true;
 }
+//Get the radio failsafe state
+bool Rover::failsafe(){
+  if(RX.failsafe()){
+    roverError = true;
+    return true;
+  }
+  return false;
+}
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
 bool Rover::getRxData(){
     //if data to be read and rx not in failsafe mode
-    if(RX.Read() && !RX.failsafe()){
+    if(RX.Read() && !failsafe()){
       //get all channel data
       RxData = RX.ch();
       //success
-      return 1;
+      return true;
     }
     //failed
-    return 0;
+    roverError = true;
+    return false;
 }
 //Returns desired channel value. channel(3) return ch3
 int Rover::channel(byte dch) const{
@@ -184,14 +197,43 @@ bool Rover::getVoltages(){
     //check for low voltage
     if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
       Serial.println("Low Battery!!");
+      roverError = true;
       return false;
     }
     return true;    
+}
+//Measure rover's angle of incline
+bool Rover::getRovAngles(){
+    static byte count = 0;            //used for timeout flag
+    static float maxIncline = 28.0;   //rover can drive upto max incline
+    
+    Wire.clearWireTimeoutFlag();
+    safetyIMU->Execute();
+    if(Wire.getWireTimeoutFlag()){
+      count++;
+      if(count>5){
+        roverError = true;
+        return false;
+      }
+    }
+    else{
+      count = 0;
+      rovRoll = safetyIMU->GetAngX();
+      rovPitch = safetyIMU->GetAngY();
+    }
+
+    if(rovRoll>maxIncline || rovPitch>maxIncline){
+      Serial.println("Too steep!!");
+      roverError = true;
+      return false;
+    }
+    return true;
 }
 //Display splash screen
 void Rover::dispSplash() const{
     lcd->setCursor(0,1);
     lcd->print("     VAR  Rover     ");
+    lcd->setCursor(0,2);
     lcd->print("(: Happy Scanning :)");
 }
 //Display screen according to operator input, only every timeDelay
@@ -229,7 +271,6 @@ void Rover::displayLCD() const{
 }
 //Display battery voltages/percentages, uptime, and current status to LCD
 void Rover::dispScr1() const{
-//    lcd->clear();
     //display battery info
     lcd->setCursor(0,0);  
     lcd->print("Front: ");
@@ -282,7 +323,6 @@ void Rover::dispScr1() const{
 }
 //Display pitch/roll info and lift height to LCD
 void Rover::dispScr2() const{
-//    lcd->clear();
     lcd->setCursor(0,0);
     lcd->print("Screen 2");
 }
@@ -291,9 +331,9 @@ void Rover::dispScr3() const{
     dispError();
 }
 //Display error messages and warnings to LCD
-void Rover::dispError() const{
+void Rover::dispError(){
     static unsigned long lvlPrevTime = 0; //previous time the function was called
-    static unsigned long timeDelay = 500; //ms to wait before updating LCD
+    static unsigned long timeDelay = 1000;//ms to wait before updating LCD
     
     //only clear LCD every timeDelay ms
     if(millis()-lvlPrevTime>timeDelay){
@@ -303,11 +343,22 @@ void Rover::dispError() const{
 
     //display error
     lcd->setCursor(0,0);
-    if(roverError){
-      lcd->print("ERROR");
+    if(!roverError){
+      lcd->print("No Errors :)");
+    }
+    else if(!getVoltages()){
+      lcd->print("Low battery!!");
+    }
+    else if(!getRovAngles()){
+      lcd->print("Maximum incline!!");
+      lcd->setCursor(0,1);
+      lcd->print("(or bad sensor read)");
+    }
+    else if(failsafe()){
+      lcd->print("No radio signal!!");
     }
     else{
-      lcd->print("No errors :)");
+      roverError = false;
     }
 
     //display current status of the rover
@@ -330,8 +381,8 @@ void Rover::motorRelays(bool enable){
     digitalWrite(BRR,enable);
 }
 //Drive control
-void Rover::drive(){
-  if(failsafe() || !armed){
+void Rover::drive(bool enable = 1){
+  if(failsafe() || !armed || !enable){
     analogWrite(FL,188);
     analogWrite(BL,188);
     analogWrite(FR,188);
@@ -362,7 +413,7 @@ void Rover::drive(){
   }
 }
 //Adjust leveler angle from TX input
-void Rover::moveLeveler(){
+void Rover::moveLeveler(bool enable = 1){
   static unsigned long lvlPrevTime = 0; //previous time the function was called
   unsigned long timeDelay = 500;        //ms to wait to send a message
   int maxAngleOffset = 30;              //maximum angle of allowable adjustment
@@ -371,7 +422,7 @@ void Rover::moveLeveler(){
 
   //rover in failsafe or not armed
   //stop the leveler from moving 
-  if(failsafe() || !armed){
+  if(failsafe() || !armed || !enable){
     Serial2.println("S");
     return;
   }
@@ -410,9 +461,9 @@ void Rover::moveLeveler(){
   return;
 }
 //Raise and lower lift
-void Rover::lift(){
+void Rover::lift(bool enable = 1){
     //if failsafe or disarmed disable lift
-    if(failsafe() || !armed){
+    if(failsafe() || !armed || !enable){
       digitalWrite(LEn,LOW);
       analogWrite(LExtend,0);
       analogWrite(LRetract,0);

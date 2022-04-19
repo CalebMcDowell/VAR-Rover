@@ -21,14 +21,11 @@ void setup() {
 }
 
 void loop() {
-  //check for valid receiver data & acceptable battery voltages
-  while(!otto.getRxData() || !otto.getVoltages()){
-      if(otto.failsafe()){
+  //check if rover in operational state
+  while(otto.getRoverError() || !otto.getRxData() || !otto.getVoltages() || !otto.getRovAngles()){
+      if(otto.getRoverError()){
         otto.disarm();
         otto.dispError();
-      }
-      else{
-        
       }
   }
   //determine arm/disarm state

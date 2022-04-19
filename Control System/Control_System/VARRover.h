@@ -8,6 +8,7 @@
   #include <array>
   #include <Wire.h>
   #include <LiquidCrystal_I2C.h>  //Requires "LiquidCrystal I2C" library (v1.1.2)
+  #include <TinyMPU6050.h>        //Requires "TinyMPU6050" library (v0.5.3)
  
   //This class is a modified version of the one found in
   //the "Bolder Flight Systems SBUS" library (v7.0.0)
@@ -78,7 +79,8 @@
       /*  Sensors */
       byte FBatt = A3;                              //Front battery analog reading
       byte BBatt = A7;                              //Back battery analog reading
-      byte CBatt = A11;                             //Control system battery analog reading      
+      byte CBatt = A11;                             //Control system battery analog reading   
+      MPU6050* safetyIMU;                           //IMU object for rover's angle of incline
     public:
       /*  General Rover */
       bool init();
@@ -86,23 +88,25 @@
       bool arm();
       bool disarm();
       /*  Receiver & Channels */
-      bool failsafe(){return RX.failsafe();};
+      bool failsafe();
       bool getRxData();
       int channel(byte) const;
       void printChannels() const;
       /*  Safety and Display  */
+      bool getRoverError() const{return roverError;}
       bool getVoltages();
+      bool getRovAngles();
       void motorRelays(bool);
       void dispSplash() const;
       void displayLCD() const;
       void dispScr1() const;
       void dispScr2() const;
       void dispScr3() const;
-      void dispError() const;
+      void dispError();
       /*  Move Stuff  */
-      void drive();
-      void moveLeveler();
-      void lift();
+      void drive(bool = 1);
+      void moveLeveler(bool = 1);
+      void lift(bool = 1);
   }; //end Rover
 
 #endif  // VARROVER_H
