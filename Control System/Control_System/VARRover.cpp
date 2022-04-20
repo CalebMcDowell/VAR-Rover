@@ -91,7 +91,7 @@ bool Rover::init(){
     //Safety IMU setup
     safetyIMU = new MPU6050(Wire);
     safetyIMU->Initialize();
-    safetyIMU->Calibrate();
+//    safetyIMU->Calibrate();
     Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
 //    safetyIMU = new Adafruit_BNO055(55, 0x28);
 //    safetyIMU->begin();
@@ -121,6 +121,9 @@ bool Rover::init(){
 bool Rover::arm(){
     armed = 1;
     motorRelays(1); //enable motor relays
+
+    Serial.println("IS ARMED");
+    return true;
 }
 //Disarms all rover systems
 bool Rover::disarm(){
@@ -162,7 +165,7 @@ int Rover::channel(byte dch) const{
 }
 //Print all channel data to serial monitor
 void Rover::printChannels() const{
-    for(int i=1; i<=16; i++){
+    for(int i=1; i<=10; i++){
       Serial.print("CH");
       Serial.print(i);
       Serial.print(":");
@@ -218,52 +221,52 @@ bool Rover::getVoltages(){
 }
 //Measure rover's angle of incline
 bool Rover::getRovAngles(){
-    static byte count = 0;            //used for timeout flag
-    static float maxIncline = 28.0;   //rover can drive upto max incline
-    static unsigned long lvlPrevTime = 0; //previous time the function was called
-    static unsigned long timeDelay = 100; //ms to wait before updating LCD
-    
-    //only get angles every timeDelay ms
-    if(millis()-lvlPrevTime<timeDelay)
-      return true;
-    //update timer
-    lvlPrevTime = millis();
-
-    rovPitch = 0;
-    rovRoll = 0;
-    
-    Wire.clearWireTimeoutFlag();
-    safetyIMU->Execute();
-    if(Wire.getWireTimeoutFlag()){
-      count++;
-      if(count>5){
-        Serial.println("IMU timeout error");
-        errorCode = 'T';  //incline error code
-        return false;
-      }
-    }
-    else{
-      count = 0;
-      rovRoll = safetyIMU->GetAngX();
-      rovPitch = safetyIMU->GetAngY();
-    }
-
-//    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
-//    imu::Vector<3> euler = safetyIMU->getVector(Adafruit_BNO055::VECTOR_EULER);
+//    static byte count = 0;            //used for timeout flag
+//    static float maxIncline = 28.0;   //rover can drive upto max incline
+//    static unsigned long lvlPrevTime = 0; //previous time the function was called
+//    static unsigned long timeDelay = 100; //ms to wait before updating LCD
 //    
-//    rovPitch = euler.y();   //Pitch
-//    rovRoll = euler.z();    //Roll
-
-//    Serial.print("Roll: ");
-//    Serial.print(rovRoll);
-//    Serial.print("\tPitch: ");
-//    Serial.println(rovPitch);
-
-    if(abs(rovRoll)>maxIncline || abs(rovPitch)>maxIncline){
-      Serial.println("Too steep!!");
-      errorCode = 'I'; //incline error code
-      return false;
-    }
+//    //only get angles every timeDelay ms
+//    if(millis()-lvlPrevTime<timeDelay)
+//      return true;
+//    //update timer
+//    lvlPrevTime = millis();
+//
+//    rovPitch = 0;
+//    rovRoll = 0;
+//    
+//    Wire.clearWireTimeoutFlag();
+//    safetyIMU->Execute();
+//    if(Wire.getWireTimeoutFlag()){
+//      count++;
+//      if(count>5){
+//        Serial.println("IMU timeout error");
+//        errorCode = 'T';  //incline error code
+//        return false;
+//      }
+//    }
+//    else{
+//      count = 0;
+//      rovRoll = safetyIMU->GetAngX();
+//      rovPitch = safetyIMU->GetAngY();
+//    }
+//
+////    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
+////    imu::Vector<3> euler = safetyIMU->getVector(Adafruit_BNO055::VECTOR_EULER);
+////    
+////    rovPitch = euler.y();   //Pitch
+////    rovRoll = euler.z();    //Roll
+//
+////    Serial.print("Roll: ");
+////    Serial.print(rovRoll);
+////    Serial.print("\tPitch: ");
+////    Serial.println(rovPitch);
+//
+//    if(abs(rovRoll)>maxIncline || abs(rovPitch)>maxIncline){
+//      Serial.println("Too steep!!");
+//      errorCode = 'I'; //incline error code
+//      return false;
+//    }
     return true;
 }
 //Display splash screen
@@ -535,49 +538,45 @@ void Rover::lift(bool enable = 1){
     }
     
     byte PWMVal = 255;  //Speed to run lift at
-    int liftMin = 0;   //Minimum position to drive motor to
+    int liftMin = 0;    //Minimum position to drive motor to
     int liftMax = 1023;  //Maximum position to drive motor to
-    int lift1Pos = analogRead(L1Pos); //Current position of lift 1
-    int lift2Pos = analogRead(L2Pos); //Current position of lift 2
+    int pos1 = analogRead(L1Pos); //Current position of lift 1
+    int pos2 = analogRead(L2Pos); //Current position of lift 2
+    int dir1, dir2;     //Direction for actuators: 1extend, -1retract, 0stop
     int liftRange = 5;  //Acceptable allowed range of lift analog readings
+    int liftDiff = 10;  //Acceptable allowed difference between two actuator positions
     int desiredPos;     //Desired position of lift
     //map ch1 to lift range
     if(channel(1)>150 && channel(1)<1900)
       desiredPos = map(channel(1),172,1811,liftMin,liftMax);
-    else
+    else{
+      digitalWrite(LEn,0);
+      analogWrite(L1Extend,0);
+      analogWrite(L1Retract,0);
+      analogWrite(L2Extend,0);
+      analogWrite(L2Retract,0);
       return;
+    }
+    
     //enable lift
     digitalWrite(LEn,HIGH);
-    //LIFT 1
-      //retract
-      if(lift1Pos > (desiredPos+liftRange)){
-        analogWrite(L1Extend,0);
-        analogWrite(L1Retract,PWMVal);
-      }
-      //extend
-      else if(lift1Pos < (desiredPos-liftRange)){
-        analogWrite(L1Retract,0);
-        analogWrite(L1Extend,PWMVal);
-      }
-      //within desired range
-      else{
-        analogWrite(L1Extend,0);
-        analogWrite(L1Retract,0);
-      }
-    //LIFT 2
-      //retract
-      if(lift2Pos > (desiredPos+liftRange)){
-        analogWrite(L2Extend,0);
-        analogWrite(L2Retract,PWMVal);
-      }
-      //extend
-      else if(lift2Pos < (desiredPos-liftRange)){
-        analogWrite(L2Retract,0);
-        analogWrite(L2Extend,PWMVal);
-      }
-      //within desired range
-      else{
-        analogWrite(L2Extend,0);
-        analogWrite(L2Retract,0);
-      }
+    //determine LIFT 1 direction
+    if(pos1>(desiredPos+liftRange) && (pos2-pos1)<liftDiff)       //retract
+      dir1 = -1;
+    else if(pos1<(desiredPos-liftRange) && (pos1-pos2)<liftDiff)  //extend
+      dir1 = 1;
+    else                                                          //stop
+      dir1 = 0;
+    //determien LIFT 2 direction
+    if(pos2>(desiredPos+liftRange) && (pos1-pos2)<liftDiff)       //retract
+      dir2 = -1;
+    else if(pos2<(desiredPos-liftRange) && (pos2-pos1)<liftDiff)  //extend
+      dir2 = 1;
+    else                                                          //stop
+      dir2 = 0;
+    //write direction to actuators
+    analogWrite(L1Retract,constrain(PWMVal*-dir1,0,255));
+    analogWrite(L1Extend,constrain(PWMVal*dir1,0,255));
+    analogWrite(L2Retract,constrain(PWMVal*-dir2,0,255));
+    analogWrite(L2Extend,constrain(PWMVal*dir2,0,255));
 }
