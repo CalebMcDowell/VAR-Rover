@@ -88,8 +88,14 @@ bool Rover::init(){
     lcd->backlight();
     dispSplash();
     delay(5000);
-    lcd->clear();
-    //Drivetrain setup
+    //Safety IMU setup
+    safetyIMU = new MPU6050(Wire);
+    safetyIMU->Initialize();
+    safetyIMU->Calibrate();
+    Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
+//    safetyIMU = new Adafruit_BNO055(55, 0x28);
+//    safetyIMU->begin();
+//    safetyIMU->setExtCrystalUse(true);
     //Drivetrain relay setup
     pinMode(FLR,OUTPUT);
     pinMode(FRR,OUTPUT);
@@ -100,10 +106,6 @@ bool Rover::init(){
     //Leveler setup
     Serial2.begin(9600);
     Serial2.setTimeout(100);
-    //Safety IMU setup
-    safetyIMU = new MPU6050(Wire);
-    safetyIMU->Initialize();
-    Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
     //Disarm rover
     if(!disarm()){
       return false;
@@ -112,6 +114,7 @@ bool Rover::init(){
     Serial1.begin(9600);
     RX.Begin();
     //Init success
+    lcd->clear();
     return true;
 }
 //Arms the rover which allows subsystems to run
@@ -130,25 +133,24 @@ bool Rover::disarm(){
     Serial.println("DISARMED");
     return true;
 }
-//Get the radio failsafe state
-bool Rover::failsafe(){
-  if(RX.failsafe()){
-    roverError = true;
-    return true;
-  }
-  return false;
+//Get the radio failsafe state, updates by RX.Read()
+bool Rover::failsafe() const{
+    return RX.failsafe();
 }
 //Get an array of the channel values. Returns 0 if error/failsafe/etc
 bool Rover::getRxData(){
     //if data to be read and rx not in failsafe mode
-    if(RX.Read() && !failsafe()){
+    if(RX.Read() && !RX.failsafe()){
       //get all channel data
       RxData = RX.ch();
       //success
       return true;
     }
     //failed
-    roverError = true;
+    if(RX.failsafe()){
+      Serial.println("No radio");
+      errorCode = 'R';  //radio error code
+    }
     return false;
 }
 //Returns desired channel value. channel(3) return ch3
@@ -169,6 +171,13 @@ void Rover::printChannels() const{
     }
     Serial.println("");
 }
+//Get if rover has an active error code
+bool Rover::getRoverError() const{
+  if(errorCode == 'N')
+    return false;
+  else
+    return true;
+}
 //Measure battery voltages
 bool Rover::getVoltages(){
     int maxAn = 681;   //16.8V (max analog reading)
@@ -179,25 +188,30 @@ bool Rover::getVoltages(){
     int BackAn = analogRead(BBatt);
     int ControlAn = analogRead(CBatt);
     
-    //equation based on y = 40.463x+0.9332, derived from voltage sensor testing
-    FBatV = (float(FrontAn)-0.9332)/40.463;
-    BBatV = (float(BackAn)-0.9332)/40.463;
-    CBatV = (float(ControlAn)-0.9332)/40.463;
+    //equations based on voltage sensor testing
+    //Back and Front different from Control because of wire length
+    FBatV = (float(FrontAn)-41.398)/40.353;
+    BBatV = (float(BackAn)-41.398)/40.353;
+    CBatV = (float(ControlAn)+5.6017)/40.353;
     
     //map analog values to percentage charge
     FBatAmt = map(constrain(FrontAn,minAn,maxAn),minAn,maxAn,0,100);
     BBatAmt = map(constrain(BackAn,minAn,maxAn),minAn,maxAn,0,100);
     CBatAmt = map(constrain(ControlAn,minAn,maxAn),minAn,maxAn,0,100);
   
-  //  Serial.print("FV: ");
-  //  Serial.print(FBatV);
+//    Serial.print("FV: ");
+//    Serial.print(FrontAn);
+//    Serial.print("BV: ");
+//    Serial.print(BackAn);
+//    Serial.print("CV: ");
+//    Serial.println(ControlAn);
   //  Serial.print("\tF%: ");
   //  Serial.println(FBatAmt);
   
     //check for low voltage
-    if(FrontAn<minAn){// || BackAn<minAn || ControlAn<minAn){
+    if(FrontAn<minAn || BackAn<minAn || ControlAn<minAn){
       Serial.println("Low Battery!!");
-      roverError = true;
+      errorCode = 'V';  //voltage error code
       return false;
     }
     return true;    
@@ -206,13 +220,25 @@ bool Rover::getVoltages(){
 bool Rover::getRovAngles(){
     static byte count = 0;            //used for timeout flag
     static float maxIncline = 28.0;   //rover can drive upto max incline
+    static unsigned long lvlPrevTime = 0; //previous time the function was called
+    static unsigned long timeDelay = 100; //ms to wait before updating LCD
+    
+    //only get angles every timeDelay ms
+    if(millis()-lvlPrevTime<timeDelay)
+      return true;
+    //update timer
+    lvlPrevTime = millis();
+
+    rovPitch = 0;
+    rovRoll = 0;
     
     Wire.clearWireTimeoutFlag();
     safetyIMU->Execute();
     if(Wire.getWireTimeoutFlag()){
       count++;
       if(count>5){
-        roverError = true;
+        Serial.println("IMU timeout error");
+        errorCode = 'T';  //incline error code
         return false;
       }
     }
@@ -222,9 +248,20 @@ bool Rover::getRovAngles(){
       rovPitch = safetyIMU->GetAngY();
     }
 
-    if(rovRoll>maxIncline || rovPitch>maxIncline){
+//    //Get current orientation (Euler angles or degrees), in form of X,Y,Z vector
+//    imu::Vector<3> euler = safetyIMU->getVector(Adafruit_BNO055::VECTOR_EULER);
+//    
+//    rovPitch = euler.y();   //Pitch
+//    rovRoll = euler.z();    //Roll
+
+//    Serial.print("Roll: ");
+//    Serial.print(rovRoll);
+//    Serial.print("\tPitch: ");
+//    Serial.println(rovPitch);
+
+    if(abs(rovRoll)>maxIncline || abs(rovPitch)>maxIncline){
       Serial.println("Too steep!!");
-      roverError = true;
+      errorCode = 'I'; //incline error code
       return false;
     }
     return true;
@@ -242,11 +279,18 @@ void Rover::displayLCD() const{
     static unsigned long timeDelay = 500; //ms to wait before updating LCD
     static byte curDisp = 0;              //indicates which display currently selected
     
+    if(getRoverError()){
+      curDisp = -1;
+      dispError();
+      return;
+    }
+    
     //only update LCD every timeDelay ms
     if(millis()-lvlPrevTime<timeDelay)
       return;
     //update timer
     lvlPrevTime = millis();
+
     //display desired screen
     if(channel(7)==172){
       if(1 != curDisp) lcd->clear();
@@ -324,7 +368,13 @@ void Rover::dispScr1() const{
 //Display pitch/roll info and lift height to LCD
 void Rover::dispScr2() const{
     lcd->setCursor(0,0);
-    lcd->print("Screen 2");
+    lcd->print("Pitch: ");
+    lcd->print(rovPitch);
+    lcd->setCursor(0,1);
+    lcd->print("Roll:  ");
+    lcd->print(rovRoll);
+    lcd->setCursor(0,3);
+    lcd->print("Lift Height: ");
 }
 //Display screen 3 info, currently error screen, to LCD
 void Rover::dispScr3() const{
@@ -343,22 +393,32 @@ void Rover::dispError(){
 
     //display error
     lcd->setCursor(0,0);
-    if(!roverError){
+    if(errorCode == 'N'){
       lcd->print("No Errors :)");
     }
-    else if(!getVoltages()){
+    else if(errorCode == 'V'){    //bad voltage, getVoltages()
       lcd->print("Low battery!!");
     }
-    else if(!getRovAngles()){
+    else if(errorCode == 'I'){  //bad incline, getRovAngles()
       lcd->print("Maximum incline!!");
       lcd->setCursor(0,1);
       lcd->print("(or bad sensor read)");
+      lcd->setCursor(0,2);
+      lcd->print("Pitch: ");
+      lcd->print(rovPitch);
+      lcd->setCursor(0,3);
+      lcd->print("Roll: ");
+      lcd->print(rovRoll);
     }
-    else if(failsafe()){
+    else if(errorCode == 'T'){  //safety IMU timed out, getRovAngles()
+      lcd->print("Safety IMU timeout!!");
+    }
+    else if(errorCode == 'R'){  //bad radio, getRxData()/failsafe()
       lcd->print("No radio signal!!");
     }
     else{
-      roverError = false;
+      errorCode = 'N';
+      lcd->print("Unknown error");
     }
 
     //display current status of the rover
@@ -372,6 +432,8 @@ void Rover::dispError(){
     else{
       lcd->print("Disarmed");
     }
+
+    errorCode = 'N';
 }
 //Enable/disable motors
 void Rover::motorRelays(bool enable){
@@ -465,15 +527,18 @@ void Rover::lift(bool enable = 1){
     //if failsafe or disarmed disable lift
     if(failsafe() || !armed || !enable){
       digitalWrite(LEn,LOW);
-      analogWrite(LExtend,0);
-      analogWrite(LRetract,0);
+      analogWrite(L1Extend,0);
+      analogWrite(L1Retract,0);
+      analogWrite(L2Extend,0);
+      analogWrite(L2Retract,0);
       return;
     }
     
     byte PWMVal = 255;  //Speed to run lift at
     int liftMin = 0;   //Minimum position to drive motor to
     int liftMax = 1023;  //Maximum position to drive motor to
-    int liftPos = analogRead(LPos); //Current position of lift
+    int lift1Pos = analogRead(L1Pos); //Current position of lift 1
+    int lift2Pos = analogRead(L2Pos); //Current position of lift 2
     int liftRange = 5;  //Acceptable allowed range of lift analog readings
     int desiredPos;     //Desired position of lift
     //map ch1 to lift range
@@ -483,19 +548,36 @@ void Rover::lift(bool enable = 1){
       return;
     //enable lift
     digitalWrite(LEn,HIGH);
-    //retract
-    if(liftPos > (desiredPos+liftRange)){
-      analogWrite(LExtend,0);
-      analogWrite(LRetract,PWMVal);
-    }
-    //extend
-    else if(liftPos < (desiredPos-liftRange)){
-      analogWrite(LRetract,0);
-      analogWrite(LExtend,PWMVal);
-    }
-    //within desired range
-    else{
-      analogWrite(LExtend,0);
-      analogWrite(LRetract,0);
-    }
+    //LIFT 1
+      //retract
+      if(lift1Pos > (desiredPos+liftRange)){
+        analogWrite(L1Extend,0);
+        analogWrite(L1Retract,PWMVal);
+      }
+      //extend
+      else if(lift1Pos < (desiredPos-liftRange)){
+        analogWrite(L1Retract,0);
+        analogWrite(L1Extend,PWMVal);
+      }
+      //within desired range
+      else{
+        analogWrite(L1Extend,0);
+        analogWrite(L1Retract,0);
+      }
+    //LIFT 2
+      //retract
+      if(lift2Pos > (desiredPos+liftRange)){
+        analogWrite(L2Extend,0);
+        analogWrite(L2Retract,PWMVal);
+      }
+      //extend
+      else if(lift2Pos < (desiredPos-liftRange)){
+        analogWrite(L2Retract,0);
+        analogWrite(L2Extend,PWMVal);
+      }
+      //within desired range
+      else{
+        analogWrite(L2Extend,0);
+        analogWrite(L2Retract,0);
+      }
 }

@@ -14,23 +14,33 @@
 #include "VARRover.h"
 Rover otto;
 
+byte armCount = 0;
+
 void setup() {
+  delay(1000);
   pinMode(LED_BUILTIN,OUTPUT);
   Serial.begin(9600);
   otto.init();
 }
 
-void loop() {
-  //check if rover in operational state
-  while(otto.getRoverError() || !otto.getRxData() || !otto.getVoltages() || !otto.getRovAngles()){
+void loop() {  
+  //check if rover in operational state, checks functions from LEFT to RIGHT
+  while(!otto.getRxData() || !otto.getVoltages() || !otto.getRovAngles() || otto.getRoverError()){
       if(otto.getRoverError()){
         otto.disarm();
-        otto.dispError();
+        otto.displayLCD();
       }
   }
   //determine arm/disarm state
-  if(otto.channel(5) >= 1800) otto.arm();
-  else  otto.disarm();
+  if(otto.isArmed() ^= otto.channel(5)==1811) //XOR
+    armCount++;
+  else
+    armCount=0;
+  if(armCount>2){
+    if(otto.isArmed())  otto.disarm();
+    else                otto.arm();
+    armCount=0;
+  }
   //if armed, rover movement allowed
   if(otto.isArmed()){
       otto.drive();
@@ -39,6 +49,6 @@ void loop() {
   }
   //update LCD screen (only every timeDelay)
   otto.displayLCD();
-  
+
 //  otto.printChannels();
 }

@@ -9,7 +9,11 @@
   #include <Wire.h>
   #include <LiquidCrystal_I2C.h>  //Requires "LiquidCrystal I2C" library (v1.1.2)
   #include <TinyMPU6050.h>        //Requires "TinyMPU6050" library (v0.5.3)
- 
+//  #include <Adafruit_Sensor.h>
+//  #include <Adafruit_BNO055.h>
+//  #include <utility/imumaths.h>
+
+  
   //This class is a modified version of the one found in
   //the "Bolder Flight Systems SBUS" library (v7.0.0)
   class SbusRx {
@@ -52,7 +56,7 @@
     private:
       /*  General */
       bool armed;                                   //Rover armed/disarmed2
-      bool roverError;                              //Indicate if the rover has an error or not
+      char errorCode;                               //Character to indicate what the error is
       float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
       byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
       float rovPitch, rovRoll;                      //Pitch and roll values for rover
@@ -67,20 +71,24 @@
       byte BL = 10;                                 //Back Left PWM
       byte BR = 11;                                 //Back Right PWM
       /*  Relays */
-      byte FLR = 28;                                 //Front Left Relay
-      byte FRR = 29;                                 //Front Right Relay
-      byte BLR = 30;                                 //Back Left Relay
-      byte BRR = 31;                                 //Back Right Relay
+      byte FLR = 28;                                //Front Left Relay
+      byte FRR = 29;                                //Front Right Relay
+      byte BLR = 30;                                //Back Left Relay
+      byte BRR = 31;                                //Back Right Relay
       /*  Lift  */
       byte LEn = 2;                                 //Lift Enable
-      byte LExtend = 3;                             //Lift Forward PWM
-      byte LRetract = 4;                            //Lift Retract PWM
-      byte LPos = A14;                              //Lift analog positional feedback
+      byte L1Extend = 3;                            //Lift 1 Forward PWM
+      byte L1Retract = 4;                           //Lift 1 Retract PWM
+      byte L1Pos = A10;                             //Lift 1 analog positional feedback
+      byte L2Extend = 5;                            //Lift 2 Forward PWM
+      byte L2Retract = 6;                           //Lift 2 Retract PWM
+      byte L2Pos = A14;                             //Lift 2 analog positional feedback
       /*  Sensors */
       byte FBatt = A3;                              //Front battery analog reading
       byte BBatt = A7;                              //Back battery analog reading
       byte CBatt = A11;                             //Control system battery analog reading   
       MPU6050* safetyIMU;                           //IMU object for rover's angle of incline
+//      Adafruit_BNO055* safetyIMU;
     public:
       /*  General Rover */
       bool init();
@@ -88,12 +96,12 @@
       bool arm();
       bool disarm();
       /*  Receiver & Channels */
-      bool failsafe();
+      bool failsafe() const;
       bool getRxData();
       int channel(byte) const;
       void printChannels() const;
       /*  Safety and Display  */
-      bool getRoverError() const{return roverError;}
+      bool getRoverError() const;
       bool getVoltages();
       bool getRovAngles();
       void motorRelays(bool);
