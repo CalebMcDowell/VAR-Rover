@@ -9,6 +9,7 @@
   - Lift
   - Leveler
   - Power distribution
+  - Safety Features
 */
 
 #include "VARRover.h"
@@ -24,10 +25,6 @@ void setup() {
 }
 
 void loop() {
-//  while(1){
-//    otto.getRovAngles();
-//  }
-  
   //check if rover in operational state, checks functions from LEFT to RIGHT
   while(!otto.getRxData() || !otto.getVoltages() || !otto.getRovAngles() || otto.getRoverError()){
     if(otto.getRoverError()){

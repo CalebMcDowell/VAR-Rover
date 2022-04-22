@@ -87,6 +87,7 @@ bool Rover::init(){
     lcd->init();
     lcd->backlight();
     dispSplash();
+    delay(5000);
     //Safety IMU setup
     Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
     safetyIMU = new MPU6050(Wire);
@@ -147,6 +148,8 @@ bool Rover::getRxData(){
       RxData = RX.ch();
       //success
 //      Serial.println("RADIO OK");
+      lcd->setCursor(19,0);
+      lcd->print(" ");
       return true;
     }
     //failed
@@ -156,6 +159,8 @@ bool Rover::getRxData(){
     }
 //    Serial.println("RADIO FAILED");
 //    errorCode = 'R';
+    lcd->setCursor(19,0);
+    lcd->print("!");
     return false;
 }
 //Returns desired channel value. channel(3) return ch3
@@ -247,7 +252,7 @@ bool Rover::getRovAngles(){
     
     //////////////UNCOMMENT FOR DEBUGGING//////////////////
     return true;
-//    Serial.println("trying for angles");
+//    Serial.println("tklrying for angles");
     
     //only get angles every timeDelay ms
     if(millis()-lvlPrevTime<timeDelay)
@@ -259,9 +264,9 @@ bool Rover::getRovAngles(){
     rovRoll = 0;
     
     Wire.clearWireTimeoutFlag();
-    Serial.println("executing");
+//    Serial.println("executing");
     safetyIMU->Execute();
-    Serial.println("done executing");
+//    Serial.println("done executing");
     if(Wire.getWireTimeoutFlag()){
       Serial.print("TIMEOUT");
       count++;
@@ -272,7 +277,7 @@ bool Rover::getRovAngles(){
       }
     }
     else{
-      Serial.println("getting angles");
+//      Serial.println("getting angles");
       count = 0;
       rovRoll = safetyIMU->GetAngX();
       rovPitch = safetyIMU->GetAngY();
@@ -346,21 +351,21 @@ void Rover::dispScr1() const{
     lcd->setCursor(0,0);  
     lcd->print("Front: ");
     lcd->print(FBatV);
-    lcd->print("V (");
-    lcd->print(FBatAmt);
-    lcd->print("%)");
+    lcd->print("V");
+//    lcd->print(FBatAmt);
+//    lcd->print("%)");
     lcd->setCursor(0,1);
     lcd->print("Back:  ");
     lcd->print(BBatV);
-    lcd->print("V (");
-    lcd->print(BBatAmt);
-    lcd->print("%)");
+    lcd->print("V");
+//    lcd->print(BBatAmt);
+//    lcd->print("%)");
     lcd->setCursor(0,2);
     lcd->print("Ctrl:  ");
     lcd->print(CBatV);
-    lcd->print("V (");
-    lcd->print(CBatAmt);
-    lcd->print("%)");
+    lcd->print("V");
+//    lcd->print(CBatAmt);
+//    lcd->print("%)");
     
     //calculate and display uptime info
     lcd->setCursor(0,3);
@@ -408,6 +413,8 @@ void Rover::dispScr2() const{
       lcd->print("0");
     lcd->print(int(liftHeight)%12);
     lcd->print("in");
+
+    Serial.println(liftHeight);
 }
 //Display screen 3 info, currently error screen, to LCD
 void Rover::dispScr3() const{
@@ -511,10 +518,10 @@ void Rover::drive(bool enable = 1){
     PWM_FB /= BUFSIZE;
     PWM_LR /= BUFSIZE;
 
-    Serial.print("Front/Back: ");
-    Serial.print(PWM_FB);
-    Serial.print("\tLeft/Right: ");
-    Serial.println(PWM_LR);
+//    Serial.print("Front/Back: ");
+//    Serial.print(PWM_FB);
+//    Serial.print("\tLeft/Right: ");
+//    Serial.println(PWM_LR);
 
     //invert LR if driving backwards, within deadzone
     if(PWM_FB<-10)
@@ -539,7 +546,7 @@ void Rover::drive(bool enable = 1){
 //Adjust leveler angle from TX input
 void Rover::moveLeveler(bool enable = 1){
   static unsigned long lvlPrevTime = 0; //previous time the function was called
-  unsigned long timeDelay = 500;        //ms to wait to send a message
+  unsigned long timeDelay = 100;        //ms to wait to send a message
   int maxAngleOffset = 30;              //maximum angle of allowable adjustment
   static float roll = 0;                //roll value adjustment to send to leveler
   static float pitch = 0;               //pitch value adjustment to send to leveler
@@ -572,10 +579,6 @@ void Rover::moveLeveler(bool enable = 1){
       roll += increment;
       roll = constrain(roll, -maxAngleOffset, maxAngleOffset);
     }
-    else{
-      roll = 0;
-      pitch = 0;
-    }
     //send message
     Serial2.print("P");
     Serial2.println(pitch);
@@ -605,6 +608,9 @@ void Rover::lift(bool enable = 1){
     int liftRange = 10;  //Acceptable allowed range of lift analog readings
     int liftDiff = 5;  //Acceptable allowed difference between two actuator positions
     int desiredPos;     //Desired position of lift
+
+    //update lift height
+    liftHeight = float(pos1+pos2)/2;
     //map ch1 to lift range
     if(channel(1)>150 && channel(1)<1900)
       desiredPos = map(channel(1),172,1811,liftMin,liftMax);
