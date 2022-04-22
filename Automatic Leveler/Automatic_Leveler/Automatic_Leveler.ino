@@ -31,7 +31,7 @@ Code to level an IMU on top of the tripod
     const int Back2 = 19;
 
 //////PID Loop//////
-    float levelLimit = 20;
+    float levelLimit = 30;
     float pitchTarget = 0;
     float rollTarget = 0;
     float pAdjust = 0;
@@ -39,9 +39,8 @@ Code to level an IMU on top of the tripod
     float tPitch, tRoll, bPitch, bRoll;
     float angleRange = 0.5;
     int pSpeed, rSpeed;
+    unsigned long prevRTime = 0, prevPTime = 0;
         
-//    float pKP = 18, pKI = 0.015, pKD = 300;
-//    float rKP = 18, rKI = 0.015, rKD = 300;
     float pKP = 18, pKI = 0.035, pKD = 400;
     float rKP = 18, rKI = 0.035, rKD = 400;
     
@@ -62,6 +61,9 @@ int receiveInfo(float &, float &);
 
 void setup() {
     delay(1000);
+    Serial1.begin(9600);
+    Serial1.setTimeout(100);
+    Serial.begin(9600);
     //General
     pinMode(LED_BUILTIN, OUTPUT);
     
@@ -84,12 +86,11 @@ void setup() {
     topIMU.begin();
     topIMU.setExtCrystalUse(true);
     bottomIMU.Initialize();
-//    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
+    Serial.println("Calibrating");
+    bottomIMU.Calibrate();        //DO NOT MOVE IMU DURING THIS FUNCTION
+    Serial.println("Done Calibrating");
     Wire.setWireTimeout(3000,true);
 
-    Serial1.begin(9600);
-    Serial1.setTimeout(100);
-    Serial.begin(9600);
 }
 void loop() {
   //get command from control system
@@ -131,6 +132,10 @@ void loop() {
       Pitch(pSpeed);
     }
     else{
+      if(millis()-prevPTime > 2000){
+        prevPTime = millis();
+        pSpeed = pitchPID(0);
+      }
       Pitch(0);
     }
     if(abs(tRoll-rollTarget) > angleRange){
@@ -138,6 +143,10 @@ void loop() {
       Roll(rSpeed);
     }
     else{
+      if(millis()-prevRTime > 2000){
+        prevRTime = millis();
+        rSpeed = rollPID(0);
+      }
       Roll(0);
     }
   //print out all info
@@ -149,18 +158,18 @@ void loop() {
     Serial.print(bPitch);
     Serial.print("\tbRoll:");
     Serial.print(bRoll);
-    Serial.print("\tpAdjust: ");
-    Serial.print(pAdjust);
-    Serial.print("\trAdjust: ");
-    Serial.print(rAdjust);
-//    Serial.print("\tpSpeed: ");
-//    Serial.print(pSpeed);
-//    Serial.print("\trSpeed: ");
-//    Serial.print(rSpeed);
-//    Serial.print("\tpTarget: ");
-//    Serial.print(pitchTarget);
-//    Serial.print("\trTarget: ");
-//    Serial.print(rollTarget);
+//    Serial.print("\tpAdjust: ");
+//    Serial.print(pAdjust);
+//    Serial.print("\trAdjust: ");
+//    Serial.print(rAdjust);
+    Serial.print("\tpSpeed: ");
+    Serial.print(pSpeed);
+    Serial.print("\trSpeed: ");
+    Serial.print(rSpeed);
+    Serial.print("\tpTarget: ");
+    Serial.print(pitchTarget);
+    Serial.print("\trTarget: ");
+    Serial.print(rollTarget);
     Serial.println();
 }
 
@@ -298,7 +307,10 @@ int rollPID(float curRoll){
     //Propotional
     rErr = rollTarget-curRoll;
     //Integral
-    if(curRoll<3 && curRoll>-3){
+    if(curRoll == 0){
+      rIntErr = 0;
+    }
+    else if(curRoll<3 && curRoll>-3){
       rIntErr += (rErr*(curTime-prevTime));
     }
     else{
@@ -319,7 +331,10 @@ int pitchPID(float curPitch){
     //Propotional
     pErr = pitchTarget-curPitch;
     //Integral
-    if(curPitch<3.0 && curPitch>-3.0){
+    if(curPitch == 0){
+      pIntErr = 0;
+    }
+    else if(curPitch<3.0 && curPitch>-3.0){
       pIntErr += (pErr*(curTime-prevTime));
     }
     else{

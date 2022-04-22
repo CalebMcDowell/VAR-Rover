@@ -56,10 +56,11 @@
     private:
       /*  General */
       bool armed;                                   //Rover armed/disarmed
-      char errorCode;                               //Character to indicate what the error is
+      char errorCode;                         //Character to indicate what the error is
       float FBatV, BBatV, CBatV;                    //Voltage for Front, Back, and Control batteries
       byte FBatAmt, BBatAmt, CBatAmt;               //% charge for Front, Back, and Control batteries
       float rovPitch, rovRoll;                      //Pitch and roll values for rover
+      float liftHeight;                             //Height of scissor lift, in inches
       /*  Receiver Communication  */
       SbusRx RX;                                    //Object for receiving
       std::array<int16_t, SbusRx::NUM_CH()> RxData; //Array for storing received data
