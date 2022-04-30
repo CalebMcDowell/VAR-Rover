@@ -87,7 +87,7 @@ bool Rover::init(){
     lcd->init();
     lcd->backlight();
     dispSplash();
-    delay(5000);
+    delay(10000);
     //Safety IMU setup
     Wire.setWireTimeout(3000,true); //timeout after 3000us, reset on timeout
     safetyIMU = new MPU6050(Wire);
@@ -252,7 +252,7 @@ bool Rover::getRovAngles(){
     
     //////////////UNCOMMENT FOR DEBUGGING//////////////////
     return true;
-//    Serial.println("tklrying for angles");
+//    Serial.println("trying for angles");
     
     //only get angles every timeDelay ms
     if(millis()-lvlPrevTime<timeDelay)
@@ -499,8 +499,8 @@ void Rover::drive(bool enable = 1){
   static int bufFB[BUFSIZE];  //buffer to store incoming FWD/BWD values in
   static int bufLR[BUFSIZE];  //buffer to store incoming Left/Right values in
   static int curIndx = 0;     //current index of buffer
-  int PWM_FB = 0;
-  int PWM_LR = 0;
+  int PWM_FB = 0;             //PWM value for forward/backward movement
+  int PWM_LR = 0;             //PWM value for left/right movement
   
   if(channel(2)>150 && channel(2)<1900 && channel(3)>150 && channel(3)<1900){
     //forward/backward calculations, map RX values to PWM and get offset from center
@@ -546,7 +546,7 @@ void Rover::drive(bool enable = 1){
 //Adjust leveler angle from TX input
 void Rover::moveLeveler(bool enable = 1){
   static unsigned long lvlPrevTime = 0; //previous time the function was called
-  unsigned long timeDelay = 100;        //ms to wait to send a message
+  unsigned long timeDelay = 300;        //ms to wait to send a message
   int maxAngleOffset = 30;              //maximum angle of allowable adjustment
   static float roll = 0;                //roll value adjustment to send to leveler
   static float pitch = 0;               //pitch value adjustment to send to leveler
@@ -612,8 +612,11 @@ void Rover::lift(bool enable = 1){
     //update lift height
     liftHeight = float(pos1+pos2)/2;
     //map ch1 to lift range
-    if(channel(1)>150 && channel(1)<1900)
-      desiredPos = map(channel(1),172,1811,liftMin,liftMax);
+    if(channel(1)>150 && channel(1)<1900){
+      desiredPos = map(channel(1),250,1811,liftMin,liftMax);
+      if(channel(1)<250)
+        desiredPos = liftMin;
+    }
     else{
       digitalWrite(LEn,0);
       analogWrite(L1Extend,0);
@@ -649,5 +652,7 @@ void Rover::lift(bool enable = 1){
 //    Serial.print("\t");
 //    Serial.print(pos1);
 //    Serial.print("\t");
-//    Serial.println(pos2);
+//    Serial.print(pos2);
+//    Serial.print("\t");
+//    Serial.println(liftHeight);
 }

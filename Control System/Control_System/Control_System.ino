@@ -25,6 +25,7 @@ void setup() {
 }
 
 void loop() {
+  delay(10);
   //check if rover in operational state, checks functions from LEFT to RIGHT
   while(!otto.getRxData() || !otto.getVoltages() || !otto.getRovAngles() || otto.getRoverError()){
     if(otto.getRoverError()){
@@ -38,7 +39,7 @@ void loop() {
     armCount++;
   else
     armCount=0;
-  if(armCount>3){
+  if(armCount>8){
     if(otto.isArmed())  otto.disarm();
     else                otto.arm();
     armCount=0;
