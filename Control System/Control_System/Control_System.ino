@@ -3,7 +3,7 @@
 
   VAR Rover Senior Design Project
 
-  Arduino UNO Rev3 board
+  Arduino Mega 2650 board
   Code to control all subsystems in rover including:
   - Drivetrain
   - Lift
