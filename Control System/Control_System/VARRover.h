@@ -9,10 +9,6 @@
   #include <Wire.h>
   #include <LiquidCrystal_I2C.h>  //Requires "LiquidCrystal I2C" library (v1.1.2)
   #include <TinyMPU6050.h>        //Requires "TinyMPU6050" library (v0.5.3)
-//  #include <Adafruit_Sensor.h>
-//  #include <Adafruit_BNO055.h>
-//  #include <utility/imumaths.h>
-
   
   //This class is a modified version of the one found in
   //the "Bolder Flight Systems SBUS" library (v7.0.0)
