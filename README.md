@@ -10,3 +10,5 @@ The rover's tasks are to:
 - Be able to traverse rough terrain, such as the Wintergreen Gorge on campus.
 
 The project was started in August 2021.
+
+Repository Link: https://github.com/CalebMcDowell/VAR-Rover
