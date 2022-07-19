@@ -7,7 +7,7 @@ The rover's tasks are to:
 - Be able to raise and lower the equipment to a desired height
 - Be remote controlled
 - Have a long battery life
-- Be able to traverse rough terrain, such as the Wintergreen Gorge on campus.
+- Be able to traverse rough terrain, such as the Wintergreen Gorge on campus
 
 The project was started in August 2021.
 
